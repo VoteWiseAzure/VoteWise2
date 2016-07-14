@@ -9,6 +9,7 @@ var Geo = require('./geoDivPa');
 var Thread = require('./thread');
 var Post = require('./post');
 var auth = require('../../middleware/userAuth');
+var votewiseSearch = require('./search');
 
 
 
@@ -23,5 +24,5 @@ module.exports = ( app ) => {
     Geo( app );
     Thread( app );
     Post( app );
-
+	votewiseSearch(app);
 };

@@ -26,13 +26,17 @@ module.exports = mongoose.model('User', new Schema({
       type: String,
       required: true
     },
-    geoDiv: {
-      type: Schema.Types.ObjectId, ref: 'geoDivPA',
-      required: true
+    zipcode: {
+        type: String,        
+        required: true
     },
-    judicialDistrict1: String,
-    judicialDistrict2: String,
-    judicialDistrict3: String,
+    //geoDiv: {
+    //  type: Schema.Types.ObjectId, ref: 'geoDivPA',
+    //  required: true
+    //},
+    //judicialDistrict1: String,
+    //judicialDistrict2: String,
+    //judicialDistrict3: String,
     admin: {
       type: Boolean,
       required: true
@@ -53,10 +57,15 @@ module.exports = mongoose.model('User', new Schema({
       required: true
     },
 
-    address: {
-      type: Schema.Types.ObjectId, ref: 'Address',
-      required: true
-   },
+    voter: {
+        type: Boolean,
+        required: true
+    },
+
+   // address: {
+   //   type: Schema.Types.ObjectId, ref: 'Address',
+   //   required: true
+   //},
 
    created: { type: Date, default: Date.now }
 

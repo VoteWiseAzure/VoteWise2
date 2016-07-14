@@ -23,7 +23,15 @@ var Controllers = require('./app/controllers/api/index');
 // =======================
 
 var port = process.env.PORT || 8080; // used to create, sign, and verify tokens
+console.log(config.database)
 mongoose.connect(config.database); // connect to database
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function callback () {
+  console.log("Connected to MongoDB at "+ config.database);
+});
+
 app.set('superSecret', config.secret); // secret variable
 
 // ======================================
