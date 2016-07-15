@@ -22,7 +22,7 @@ module.exports.getUserFromToken = function ( token, app, cb) {
     if(err) cb({success: false, data: err});
     if(decoded){
       try{
-        console.log("in try: ", decoded);
+        // console.log("in try: ", decoded);
         cb ({success: true, data: decoded["_doc"]});
       }
       catch(e){
