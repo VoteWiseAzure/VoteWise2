@@ -6,25 +6,25 @@ const Schema = mongoose.Schema;
 // set up a mongoose model and pass it using module.exports
 module.exports = mongoose.model('User', new Schema({
     name:{
-      type: String,
-      lowercase: true
+        type: String,
+        lowercase: true
     },
     username: {
-      type: String,
-      lowercase: true,
-      required: true,
-      minlength: 3,
-      maxlength: 25
+        type: String,
+        lowercase: true,
+        required: true,
+        minlength: 3,
+        maxlength: 25
     },
     email: {
-      type: String,
-      lowercase: true,
-      required: true,
-      unique: true
+        type: String,
+        lowercase: true,
+        required: true,
+        unique: true
     },
     password: {
-      type: String,
-      required: true
+        type: String,
+        required: false
     },
     zipcode: {
         type: String,        
@@ -38,23 +38,23 @@ module.exports = mongoose.model('User', new Schema({
     //judicialDistrict2: String,
     //judicialDistrict3: String,
     admin: {
-      type: Boolean,
-      required: true
+        type: Boolean,
+        required: true
     },
 
     politician: {
-      type:Boolean,
-      required: true
+        type:Boolean,
+        required: true
     },
 
     advocate:{
-      type: Boolean,
-      required: true
+        type: Boolean,
+        required: true
     },
 
     press: {
-      type: Boolean,
-      required: true
+        type: Boolean,
+        required: true
     },
 
     voter: {
@@ -62,12 +62,14 @@ module.exports = mongoose.model('User', new Schema({
         required: true
     },
 
-   // address: {
-   //   type: Schema.Types.ObjectId, ref: 'Address',
-   //   required: true
-   //},
+    // address: {
+    //   type: Schema.Types.ObjectId, ref: 'Address',
+    //   required: true
+    //},
 
-   created: { type: Date, default: Date.now }
+    created: { type: Date, default: Date.now },
+
+    isfacebooksigin: {type:Boolean,default: false}
 
 
 }));

@@ -60,7 +60,7 @@ module.exports.createuser = function (req, res) {
     var usertype = req.body.type;
 
     var user = new User({
-        password: md5(req.body.password),
+        password: req.body.password != '' ? md5(req.body.password) : '',
         admin: false,
         politician: usertype == 'politician' ? true : false,
         press: usertype == 'press' ? true : false,
@@ -68,7 +68,8 @@ module.exports.createuser = function (req, res) {
         voter: usertype == 'voter' ? true : false,
         email: req.body.email,
         zipcode: req.body.zipcode,
-        username: req.body.username
+        username: req.body.username,
+        isfacebooksigin: (req.body.isfacebooksigin !== undefined && req.body.isfacebooksigin != null) ? req.body.isfacebooksigin : false
     });
     // save the user
     user.save(function (err, user) {
