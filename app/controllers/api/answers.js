@@ -29,9 +29,17 @@ module.exports = function( app ) {
   */
 
   app.post('/answers/create', function(req, res) {
-    var params = req.body;
-    
-      var verifydRes = commonHelpers.verfiyRequiredFields(['questionId', 'answer', "token"], params, res); //verify require fields
+      var params = req.body;
+      
+      var token = req.body.token || req.query.token || req.headers['x-access-token'];
+      if(!token){
+        return res.status(403).send({ 
+            success: false, 
+            error: 'No token provided.' 
+        }); 
+      }
+
+      var verifydRes = commonHelpers.verfiyRequiredFields(['questionId', 'answer'], params, res); //verify require fields
       if(!verifydRes.success){
         return res.json(verifydRes);
       }
@@ -67,6 +75,48 @@ module.exports = function( app ) {
                   return res.json({success: false, error: "Question doesn't exist."});
                 }
               });//isQuestionExist
+            }//isValidAuthor
+            else{
+              return res.json({success: false, error: "Author ID is invalid."});
+            }
+          });
+
+          //return res.json({success: true, authorId: authorId});
+        }//tokenData.success
+        else{
+          return res.json({success: false, data: tokenData.data});
+        }
+      });
+  });
+
+  app.get('/answers/popular', function(req, res) {
+      //returns most popular questions: if Politician call this API it returns
+      //questions most answered by Voters and vice versa
+    
+      var token = req.body.token || req.query.token || req.headers['x-access-token'];
+      if(!token){
+        return res.status(403).send({ 
+            success: false, 
+            error: 'No token provided.' 
+        }); 
+      }
+
+      var params = req.query;
+
+      var verifydRes = commonHelpers.verfiyRequiredFields(['categoryIds'], params, res); //verify require fields
+      if(!verifydRes.success){
+        return res.json(verifydRes);
+      }
+
+      var categoryIds = params.categoryIds ? params.categoryIds.split(",") : [];
+
+      commonHelpers.getUserFromToken(token, app, function(tokenData){
+        if(tokenData.success){
+          var authorData = tokenData.data;
+
+          modelHelpers.getUserData(authorData._id, function (userData) {
+            if(userData){
+              modelHelpers.getPopularAnswers(categoryIds, userData, res, app);
             }//isValidAuthor
             else{
               return res.json({success: false, error: "Author ID is invalid."});
