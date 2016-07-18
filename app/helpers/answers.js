@@ -1,7 +1,6 @@
 var User = require('../models/user');
 var Questions = require('../models/questions');
 var Answers = require('../models/answers');
-// import eachOf from 'async/eachOf';
 var async = require('async');
 
 var saltRounds = 10;
@@ -16,13 +15,13 @@ module.exports.isValidUser = function ( id, cb ) {
   console.log("isValidUser id: ",id);
   User.find({
     _id: id
-  }, {_id: 1}, function ( err, resData ) {
+  }, {}, function ( err, resData ) {
     // console.log("err: ",err);
     // console.log("resData: ",resData);
 
-    if (err) return cb(false);
+    if (err) return cb(null);
     if (resData) {
-      return (resData.length > 0) ? cb(true) : cb(false); 
+      return (resData.length > 0) ? cb(resData[0]) : cb(null); 
     };
   });
 };
@@ -235,5 +234,120 @@ module.exports.removeAnswer = function ( id, res, app ) {
   Answers.remove({_id: id}, function ( err, delData ) {
         if (err) res.json({success: false, error: err});
         if (delData) res.json({success: true, data: delData});
+  });
+}
+
+module.exports.getCompareAnswers = function (user, params, userIds, res, app) {
+  console.log("** getCompareAnswers **");
+  
+  var userQuery = {};
+
+  if(!userIds || userIds.length <= 0){
+    switch(params.compare_with){
+      case 'politician':
+        userQuery.politician = true;
+      break;
+      case 'voter':
+        userQuery.voter = true;
+      break;
+      case 'advocate':
+        userQuery.advocate = true;
+      break;
+      case 'press':
+        userQuery.press = true;
+      break;
+    }
+  }
+  else{
+    userQuery = {"_id": {"$in": userIds}};
+  }
+
+  console.log("userQuery: ",userQuery);
+
+  Questions.find({"categories.cid": params.categoryId}, {})
+  .exec(function(err, quesData){
+    if(err) return res.json({success: false, error: err});
+    if(quesData) {
+      User.find(userQuery, {})
+      .exec(function(err, userData){
+        // if(err) return res.json({success: false, error: err});
+        
+        // var selUserIds = [];
+        // if(userData) {
+        //   userData.forEach(function(uVal, key){
+        //     selUserIds.push(uVal._id);
+        //   });
+        // }
+
+        var getAnswerByUserIds = function(question_id, userData, compareObj, cb){
+          
+          var anserArray = [];
+          async.forEachOf(userData, function (user_data, key, callback) {
+            
+            Answers.find({"question": question_id, "author": user_data._id}, {})
+            .exec(function(err, ansData){
+              if(err) console.log("err: ",err);
+              if(ansData && ansData.length > 0){
+                anserArray.push({
+                  // author: user_data,
+                  "author": user_data,
+                  "_id": ansData[0]._id,
+                  "created": ansData[0].created,
+                  "comment": ansData[0].comment,
+                  "answer": ansData[0].answer,
+                  "importance": ansData[0].importance,
+                  "match": 100-20*(Math.abs(compareObj.answer-ansData[0].answer))
+                });
+              }
+              callback();
+            });
+          }, function (err) {
+              if (err) console.error(err.message);
+              cb(anserArray);
+          });
+        };
+
+        var tempQArr = [];
+
+        async.forEachOf(quesData, function (question, key, callback) {
+            Answers.find({author: user._id, "question": question._id})
+            .exec(function(err, compareObj){
+              if(compareObj && compareObj.length > 0){
+                getAnswerByUserIds(question._id, userData, compareObj[0], function(obj){
+                  tempQArr.push({
+                    _id: question._id,
+                    content: question.content,
+                    my_answer: {
+                      // author: user,
+                      "_id": compareObj[0]._id,
+                      "author": compareObj[0].author,
+                      "created": compareObj[0].created,
+                      "comment": compareObj[0].comment,
+                      "answer": compareObj[0].answer,
+                      "importance": compareObj[0].importance
+                    },
+                    answers: obj
+                  });
+                  callback();  
+                });
+              }
+              else{
+                tempQArr.push({
+                  _id: question._id,
+                  content: question.content,
+                  my_answer: null,
+                  answers: null
+                });
+                callback();
+              }
+            });
+          //return callback("exceptino"); //intrupt the loop
+        }, function (err) {
+          if (err) console.error(err.message);
+          //all traversed
+          return res.json({success: true, data: tempQArr});
+        });
+      });
+    }//if quesData
   });
 }

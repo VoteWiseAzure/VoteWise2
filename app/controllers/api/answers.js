@@ -44,7 +44,7 @@ module.exports = function( app ) {
         return res.json(verifydRes);
       }
 
-      commonHelpers.getUserFromToken(params.token, app, function(tokenData){
+      commonHelpers.getUserFromToken(token, app, function(tokenData){
         if(tokenData.success){
           var authorId = tokenData.data._id;
 
@@ -146,6 +146,51 @@ module.exports = function( app ) {
       }
 
       modelHelpers.removeAnswer(params.id, res, app);
+
+  });
+
+  app.get('/answers/compare', function(req, res) {
+    var params = req.query;
+      
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+    if(!token){
+      return res.status(403).send({ 
+          success: false, 
+          error: 'No token provided.' 
+      }); 
+    }
+
+    var verifydRes = commonHelpers.verfiyRequiredFields(['compare_with', 'categoryId'], params, res); //verify require fields
+    if(!verifydRes.success){
+      return res.json(verifydRes);
+    }
+
+    var userIds = params.userIds ? params.userIds.split(",") : [];
+
+    var validUserTypes = ['politician', 'voter', 'advocate', 'press'];
+    if(validUserTypes.indexOf(params.compare_with) == -1){
+      //check if valid compare_with value is passed or not
+      return res.json({success: false, error: "compare_with should be either of these: "+validUserTypes.join(", ")});
+    }
+    
+    commonHelpers.getUserFromToken(token, app, function(tokenData){
+      if(tokenData.success){
+        var userId = tokenData.data._id;
+        console.log("user data: ", tokenData);
+        modelHelpers.isValidUser(userId, function (isValidUser) {
+          if(isValidUser){
+            //return res.json({success: true, data: tokenData.data});
+            modelHelpers.getCompareAnswers(isValidUser, params, userIds, res, app);
+          }
+          else{
+            return res.json({success: false, error: "Author ID is invalid."});
+          }
+        });
+      }
+      else{
+        return res.json({success: false, data: tokenData.data});
+      }
+    });
 
   });
 }
