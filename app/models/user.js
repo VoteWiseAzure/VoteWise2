@@ -69,7 +69,8 @@ module.exports = mongoose.model('User', new Schema({
 
     created: { type: Date, default: Date.now },
 
-    isfacebooksigin: {type:Boolean,default: false}
+    isfacebooksigin: {type:Boolean,default: false},
+    isemailverified: {type:Boolean,default: false}
 
 
 }));

@@ -7,7 +7,10 @@ var jwt = require('jsonwebtoken');
 //helpers
 var helpers = require('../../helpers/controllers');
 var modelHelpers = require('../../helpers/user');
+var emailHelpers = require('../../helpers/email');
 var md5 = require('md5');
+var mailgun = require('mailgun-js');
+var encryptionhelper = require('../../helpers/encryptionhelper')
 
 module.exports = function (app) {
 
@@ -42,6 +45,7 @@ module.exports = function (app) {
         modelHelpers.createuser(req, res);
 
     });
+
 
     app.post('/user/logout', function (req, res) {
         jwt.sign(user, app.get('superSecret'), {
@@ -82,6 +86,61 @@ module.exports = function (app) {
                 return result.json(helpers.response(false, 'Authentication Failed'));
             }
         });
+    });
+
+    app.post('/user/verify', function (req, result) {
+        var id = req.body.salt;
+        id = encryptionhelper.decrypt(id);
+        console.log(id);
+        User.findOneAndUpdate({ _id: id }, { isemailverified: true }, null, function (err) {
+            if (err) { return result.json(helpers.response(false, err)); };
+            result.json({
+                success: true
+            });
+        })
+        //User.findOne({
+        //    _id: id
+        //}, function (err, user) {
+
+        //    if (err) { return result.json(helpers.response(false, err)); };
+
+        //    if (!user) {
+        //        return result.json(helpers.response(false, 'User not found! '));
+        //    }
+
+        //    if (user) {
+
+        //        user.isemailverified = true;
+
+        //        //user.update({ _id: id }, { isemailverified: true }, { upsert: true }, function (err) {
+        //        //    if (err) {
+        //        //        result.status(400);
+        //        //        return result.json({ success: false, error: err });
+        //        //    }
+        //        //    else {
+        //        //        result.json({
+        //        //            success: true
+        //        //        });
+        //        //    }
+        //        //});
+        //        //user.update(function (err, user) {
+        //        //    if (err) {
+        //        //        result.status(400);
+        //        //        return result.json({ success: false, error: err });
+        //        //    }
+        //        //    else {
+        //        //        result.json({
+        //        //            success: true
+        //        //        });
+        //        //    }
+        //        //});
+
+
+        //    }
+        //    else {
+        //        return result.json(helpers.response(false, 'Authentication Failed'));
+        //    }
+        //});
     });
 
     app.post('/user/authenticateEmail', function (req, result) {

@@ -9,7 +9,8 @@ var md5 = require('md5');
 
 var mailer = require('../middleware/mailer');
 var jwt = require('jsonwebtoken');
-
+var emailHelpers = require('../helpers/email');
+var encryptionhelper = require('../helpers/encryptionhelper')
 var helpers = require('./controllers');
 
 module.exports.isUsernameTaken = function (username, res) {
@@ -79,7 +80,10 @@ module.exports.createuser = function (req, res) {
         }
 
         else {
-            //mailer.mailTo(app, user.email, 'Thank you for signing up!');
+            console.log("User : " + user);
+            var userId = encryptionhelper.encrypt(user._id.toString());
+            var verifyUrl = req.body.verificationurl + "/" + userId;
+            emailHelpers.sendWelcomeEmail(req.body.username, req.body.email, verifyUrl);
             return res.json({ success: true, user: user });
         }
 
