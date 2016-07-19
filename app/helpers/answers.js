@@ -268,7 +268,7 @@ module.exports.getCompareAnswers = function (user, params, userIds, res, app) {
   .exec(function(err, quesData){
     if(err) return res.json({success: false, error: err});
     if(quesData) {
-      User.find(userQuery, {})
+      User.find(userQuery, {password: 0})
       .exec(function(err, userData){
         // if(err) return res.json({success: false, error: err});
         
