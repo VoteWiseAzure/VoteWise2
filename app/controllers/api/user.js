@@ -7,6 +7,7 @@ var jwt = require('jsonwebtoken');
 //helpers
 var helpers = require('../../helpers/controllers');
 var modelHelpers = require('../../helpers/user');
+
 var emailHelpers = require('../../helpers/email');
 var Answers = require('../../models/answers');
 var async = require('async');
@@ -57,7 +58,6 @@ module.exports = function (app) {
     });
 
     app.post('/user/authenticate', function (req, result) {
-
         User.findOne({
             username: req.body.username,
             password: md5(req.body.password)
