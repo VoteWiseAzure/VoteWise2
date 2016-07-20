@@ -160,17 +160,19 @@ module.exports = function( app ) {
       }); 
     }
 
-    var verifydRes = commonHelpers.verfiyRequiredFields(['compare_with', 'categoryId'], params, res); //verify require fields
+    var verifydRes = commonHelpers.verfiyRequiredFields(['categoryIds'], params, res); //verify require fields
     if(!verifydRes.success){
       return res.json(verifydRes);
     }
 
     var userIds = params.userIds ? params.userIds.split(",") : [];
 
-    var validUserTypes = ['politician', 'voter', 'advocate', 'press'];
-    if(validUserTypes.indexOf(params.compare_with) == -1){
-      //check if valid compare_with value is passed or not
-      return res.json({success: false, error: "compare_with should be either of these: "+validUserTypes.join(", ")});
+    if(params.compare_with){
+      var validUserTypes = ['politician', 'voter', 'advocate', 'press'];
+      if(validUserTypes.indexOf(params.compare_with) == -1){
+        //check if valid compare_with value is passed or not
+        return res.json({success: false, error: "compare_with should be either of these: "+validUserTypes.join(", ")});
+      }
     }
     
     commonHelpers.getUserFromToken(token, app, function(tokenData){

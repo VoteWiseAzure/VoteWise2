@@ -264,8 +264,11 @@ module.exports.getCompareAnswers = function (user, params, userIds, res, app) {
 
   console.log("userQuery: ",userQuery);
 
-  Questions.find({"categories.cid": params.categoryId}, {})
+  var categoryIds = params.categoryIds ? params.categoryIds.split(",") : [];
+
+  Questions.find({"categories.cid": { $in: categoryIds }}, {})
   .exec(function(err, quesData){
+    console.log("** got questions data **");
     if(err) return res.json({success: false, error: err});
     if(quesData) {
       User.find(userQuery, {password: 0})

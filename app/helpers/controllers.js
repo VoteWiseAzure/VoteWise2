@@ -75,3 +75,27 @@ module.exports.allVallidate = function ( zip, email, password, username  ) {
   }
 
   }
+
+module.exports.keySort = function(key, opt) {
+  //sort on key
+  //opt = 1 : asc, -1 : desc
+  return function(a,b){
+    if (a[key] < b[key]) return -(opt);
+    if (a[key] > b[key]) return opt;
+    return 0;
+  }
+}
+
+module.exports.keySortByDate = function(key, opt) {
+  //sort on key
+  //opt = 1 : asc, -1 : desc
+  return function(a,b){
+    // Turn your strings into dates, and then subtract them
+    // to get a value that is either negative, positive, or zero.
+    if(opt == -1)
+      return new Date(b[key]) - new Date(a[key]);
+    else
+      return new Date(a[key]) - new Date(b[key]);
+      
+  }
+}
