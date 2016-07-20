@@ -149,7 +149,7 @@ module.exports.getCategory = function (params, res, app) {
     
     Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1}}, {$unwind: "$parentIds"})
     // .sort({ "parentIds.viewOrder" : 1})
-    .lean()
+    // .lean()
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
       // if (resData) return res.json({success: false, data: user});
