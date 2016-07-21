@@ -15,6 +15,8 @@ var Categories = require('./categories');
 var Questions = require('./questions');
 var Answers = require('./answers');
 
+var Topics = require('./topics');
+
 
 module.exports = ( app ) => {
     Admin( app );
@@ -31,4 +33,5 @@ module.exports = ( app ) => {
     Categories (app);
     Questions (app);
     Answers(app);
+    Topics(app);
 };

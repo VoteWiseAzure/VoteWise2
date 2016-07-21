@@ -81,6 +81,7 @@ module.exports = function (app) {
                     success: true,
                     message: 'Logged In...',
                     name: user.username,
+                    id: user._id,
                     token: token
                 });
             }
