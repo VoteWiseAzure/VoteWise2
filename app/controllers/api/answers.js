@@ -160,7 +160,8 @@ module.exports = function( app ) {
       }); 
     }
 
-    var verifydRes = commonHelpers.verfiyRequiredFields(['categoryIds'], params, res); //verify require fields
+    // var verifydRes = commonHelpers.verfiyRequiredFields(['categoryIds'], params, res); //verify require fields
+    var verifydRes = commonHelpers.verfiyRequiredFields([], params, res); //verify require fields
     if(!verifydRes.success){
       return res.json(verifydRes);
     }

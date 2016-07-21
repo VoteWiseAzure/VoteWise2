@@ -8,6 +8,10 @@ module.exports = mongoose.model('Category', new Schema({
       type: String,
       required: true
     },
+    icon_image: {
+      type: String,
+      default: null
+    },
     description: {
     	type: String,
     	default: null

@@ -33,7 +33,7 @@ module.exports.isValidParentIds = function ( ids, cb ) {
 }
 
 
-module.exports.storeCategory = function (title, description, parentIds, arrViewOrders, res, app) {
+module.exports.storeCategory = function (title, description, parentIds, arrViewOrders, file_name, res, app) {
   // Making new adress
   var tempParentIdsArr = [];
   var len = parentIds.length;
@@ -49,7 +49,8 @@ module.exports.storeCategory = function (title, description, parentIds, arrViewO
   var category = new Category({
     title: title,
     description: description,
-    parentIds: tempParentIdsArr
+    parentIds: tempParentIdsArr,
+    icon_image: file_name
   });
 
   // Saving adress
@@ -58,6 +59,40 @@ module.exports.storeCategory = function (title, description, parentIds, arrViewO
       //res.status(400);
       console.log("err: ",err);
       return res.json( { success: false, error: "Unable to add category" } );
+    }
+
+    if(category){
+      return res.json({success: true, data: category});
+    }
+  });
+}
+
+module.exports.updateCategory = function (id, title, description, parentIds, arrViewOrders, file_name, res, app) {
+  // Making new adress
+  var tempParentIdsArr = [];
+  if(parentIds){
+    var len = parentIds.length;
+    for(var i=0; i<len; i++){
+      tempParentIdsArr.push({
+        pid: parentIds[i],
+        viewOrder: arrViewOrders[i]
+      });
+    } 
+  }
+  
+  console.log("tempParentIdsArr: ",tempParentIdsArr);
+  var updateObj = {};
+  if(title) updateObj["title"] = title;
+  if(description) updateObj["description"] = description;
+  if(parentIds) updateObj["parentIds"] = parentIds;
+  if(file_name) updateObj["icon_image"] = file_name;
+  console.log("updateObj: ",updateObj);
+  // Saving adress
+  Category.update({"_id": id}, updateObj, function ( err, category ) {
+    if (err) {
+      //res.status(400);
+      console.log("err: ",err);
+      return res.json( { success: false, error: "Unable to update category" } );
     }
 
     if(category){
@@ -105,6 +140,7 @@ module.exports.getCategory = function (params, res, app) {
                 "created": resCat.created,
                 "parentIds": resCat.parentIds,
                 "description": resCat.description,
+                "icon_image": resCat.icon_image,
                 "order": resCat.order, //if order is present add it
                 "total_questions": total_questions
               });
@@ -123,6 +159,7 @@ module.exports.getCategory = function (params, res, app) {
             "created": resCat.created,
             "parentIds": resCat.parentIds,
             "description": resCat.description,
+            "icon_image": resCat.icon_image,
             "total_questions": 0
           });
           
@@ -147,7 +184,7 @@ module.exports.getCategory = function (params, res, app) {
     //show all the subcategories of given parent id
     // searchParam = { parentIds: { $elemMatch: { pid: params.parentId } } };
     
-    Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1}}, {$unwind: "$parentIds"})
+    Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1}}, {$unwind: "$parentIds"})
     // .sort({ "parentIds.viewOrder" : 1})
     // .lean()
     .exec(function ( err, resData ) {
@@ -174,7 +211,7 @@ module.exports.getCategory = function (params, res, app) {
     });
   }
   else if(params.id){
-    Category.find({_id: params.id}, {_id: 1, title: 1, description: 1, parentIds: 1, created: 1})
+    Category.find({_id: params.id}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1})
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
       //if (resData) return res.json({success: true, data: resData});
@@ -188,7 +225,7 @@ module.exports.getCategory = function (params, res, app) {
   }
   else if(params.root == 1){
     //show all root categories
-    Category.find({parentIds: []}, {_id: 1, title: 1, description: 1, parentIds: 1, created: 1})
+    Category.find({parentIds: []}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1})
     .lean()
     .exec(function ( err, catData ) {
       if (err) return res.json({success: false, error: err});
@@ -204,7 +241,7 @@ module.exports.getCategory = function (params, res, app) {
   }
   else{
     //show all categories
-    Category.find({}, {_id: 1, title: 1, description: 1, parentIds: 1, created: 1})
+    Category.find({}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1})
     .exec(function ( err, catData ) {
       if (err) return res.json({success: false, error: err});
       // if (catData) return res.json({success: true, data: catData});

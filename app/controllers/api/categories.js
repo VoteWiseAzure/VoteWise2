@@ -8,53 +8,94 @@ var jwt = require('jsonwebtoken');
 var helpers = require('../../helpers/controllers');
 var modelHelpers = require('../../helpers/categories');
 var commonHelpers = require('../../helpers/common');
+var multer  = require('multer');
 
 module.exports = function( app ) {
 
   app.post('/categories/create', function(req, res) {
-
+    // var params = req.body;
+    /*
     // Validations
-    var params = req.body;
     // var isValidZip = helpers.validZip( params.zip );
     // var isValidEmail = helpers.validEmail( params.email );
     // var isValidPassword = helpers.validPassword( params.password );
     // var isValidUsername = helpers.validUsername( params.username );
     // Uncomment this line for production, validations before database
     // var allValid = helpers.allVallidate( isValidZip, isValidEmail, isValidPassword, isValidUsername );
-      // var allValid = true;
+    // var allValid = true;
 
-      // Returns address model
-      //var address = modelHelpers.storeCategory(params.title, params.parentIds, res, app);
+    // Returns address model
+    //var address = modelHelpers.storeCategory(params.title, params.parentIds, res, app);
+    */
 
+    var file_name;
+    var upload = multer({ //multer settings
+      storage: multer.diskStorage({ //multers disk storage settings
+        destination: function (req, file, cb) {
+          cb(null, __dirname+'../../../uploads/');
+        },
+        filename: function (req, file, cb) {
+          var datetimestamp = Date.now();
+          var file_original_name = file.originalname;
+          var file_new_name = file_original_name.replace(/\s+/g, '-').toLowerCase();
 
-      var verifydRes = commonHelpers.verfiyRequiredFields(['title'], req.body, res); //verify require fields
-      if(!verifydRes.success){
-        return res.json(verifydRes);
-      }
+          var prefix = file_new_name.split(".")[0];
 
-      var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
-      var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+          file_name = prefix+ '-'+ datetimestamp +'.'+file_new_name.split('.')[file.originalname.split('.').length -1];
+          cb(null, file_name);
+        }
+      })
+    }).single('file');
 
-      if(arrParentIds.length != arrViewOrders.length){
-        return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
-      }
-
-      if(params.parentIds){
-        modelHelpers.isValidParentIds(arrParentIds, function(isValid) {
-          if(isValid){
-            // Stores category in db
-            modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
-          }
-          else{
-            return res.json({success: false, error: "Invalid parentIds"});
-          }
-        });
-      }
+    upload(req, res, function(err){
+      //done uploading or error occured
+      if(err) return res.json({"success": false, "error": err});
       else{
-        // Stores category in db
-        modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
-      }
+        // return res.json({"success": true, "data": file_name});
+        
+        var params = req.body;
+        console.log("req.body: ", params);
 
+        if(!params.id){
+          var verifydRes = commonHelpers.verfiyRequiredFields(['title'], params, res); //verify require fields
+          if(!verifydRes.success){
+            return res.json(verifydRes);
+          }
+        }
+
+        var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
+        var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+
+        if(arrParentIds.length != arrViewOrders.length){
+          return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
+        }
+
+        if(params.parentIds){
+          modelHelpers.isValidParentIds(arrParentIds, function(isValid) {
+            if(isValid){
+              // Stores category in db
+              modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+            }
+            else{
+              return res.json({success: false, error: "Invalid parentIds"});
+            }
+          });
+        }
+        else{
+          // Stores category in db
+          if(params.id){
+            //for updateing existing category
+            if(arrParentIds.length <= 0){
+              arrParentIds = null;
+            }
+            modelHelpers.updateCategory(params.id, params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+          }
+          else
+            modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+        }
+        
+      }//else of file upload
+    });
   });
 
   app.get('/categories/list', function(req, res) {
