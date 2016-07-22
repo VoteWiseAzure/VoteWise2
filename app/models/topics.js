@@ -14,12 +14,15 @@ module.exports = mongoose.model('Topics', new Schema({
     location: { type: String, index: true }, 
     likes: { type: Number },
     dislikes: { type: Number },
-    spam: { type: String },
+    spam: { type: Number },
+    likesUsers: [],
+    dislikesUsers: [],
+    spamUsers: [],
     sticky: { type: String, default: 'N' },
     resolved: { type: String },
     type: { type: String , default: 'B' },
     resolvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     resolvedOn: { type: Date, default: Date.now },
-    restictedTo: { type: String, required :true },
+    restrictedTo: { type: String, required :true },
     parent: { type: Schema.ObjectId, index: true }
 }));

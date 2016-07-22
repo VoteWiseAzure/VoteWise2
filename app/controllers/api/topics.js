@@ -45,20 +45,34 @@ module.exports = function( app ) {
     modelHelpers.latestTopic(params, res, app);
   });
 
+  app.get('/topics/getList', function(req, res) {
+    var params = req.query;
+    
+    console.log("Get List params : ",params);
+    modelHelpers.topicList(params, res, app);
+  });
+
   app.get('/topics/getone', function(req, res) {
     var params = req.query;
     modelHelpers.getTopic(params, res, app);
   });
 
-  app.post('/topics/update', function(req, res) {
-    var params = req.body.data;
+  app.get('/topics/getTopic', function(req, res) {
+    var params = req.query;
+    modelHelpers.getOnlyTopic(params, res, app);
+  });
 
+  app.post('/topics/update', function(req, res) {
+    var params = req.body;
+    console.log("update data called");
+    console.log(req.body);
+    console.log(params);
       var verifydRes = commonHelpers.verfiyRequiredFields(['topicId'], params, res); //verify require fields
       if(!verifydRes.success){
         return res.json(verifydRes);
       }
 
-      modelHelpers.removeCategory(params, res, app);
+      modelHelpers.updateTopic(params, res, app);
 
   });
 

@@ -17,6 +17,7 @@ var helpers = require('./controllers');
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
   console.log("Store called");
+  console.log(data);
   var topic = new Topics();
 
   topic.title = data.title;
@@ -28,14 +29,15 @@ module.exports.storeTopic = function (data, res, app) {
     name: data.createdByName
   };
   topic.createdOn = new Date();
-  topic.restictedTo = data.restrictedTo;
+  topic.restrictedTo = data.restrictedTo;
   topic.location = data.location;
-  if(data.parentId) {
-    topic.parent = data.parentId;  
+  topic.likes = 0;
+  topic.dislikes = 0;
+  topic.spam = 0;
+  if(data.parent) {
+    topic.parent = data.parent;  
   }
-  console.log(data);
-  console.log("===============");
-  console.log(topic);
+
   // Saving adress
   topic.save( function ( err, topics ) {
     if (err) {
@@ -45,15 +47,16 @@ module.exports.storeTopic = function (data, res, app) {
     }
 
     if(topics){
+      console.log("Final Result ");
+      console.log(topics);
       return res.json({success: true, data: topics});
     }
   });
 }
 
-module.exports.getTopic = function (params, res, app) {  
-  
-  if(params.parentId){
-    Topics.find({$or: [{"_id": params.parentId, "parent": params.parentId}]})
+module.exports.getOnlyTopic = function (params, res, app) {  
+    if(params.topicId){
+    Topics.findOne({"_id": params.topicId})
     .exec(function(err,restop) {
       if (err) {
         //res.status(400);
@@ -62,7 +65,68 @@ module.exports.getTopic = function (params, res, app) {
       }
 
       if(restop){
+        console.log("========getOnlyTopic=========");
+        console.log(restop);
         return res.json({success: true, data: restop});
+      }
+    });
+  } else {
+    return res.json( { success: false, error: "There are no topics" } );
+  }
+}
+
+module.exports.getTopic = function (params, res, app) {  
+  console.log("GetTopic Called");
+  console.log(params);
+  if(params.topicId){
+    Topics.find({$or:[{"_id": params.topicId, "parent": null}, {"parent": params.topicId}]})
+    .sort({"createdOn": 1})
+    .exec(function(err,restop) {
+      if (err) {
+        //res.status(400);
+        console.log("err: ",err);
+        return res.json( { success: false, error: "Unable to get Topic" } );
+      }
+
+      if(restop){
+        var finalData = Array();
+        var len = restop.length;
+        var j = 0;
+        console.log("GetTopic Result");
+        console.log(restop);
+        restop.forEach(function(val, key){
+          val = val.toObject();
+          if(val.createdBy.id){
+            User.findOne({
+                _id: val.createdBy.id
+            }, function (err, user) {
+                
+                if (user) { 
+                    val.userData = user;
+                }
+
+                Topics.count({"createdBy.id": user._id}, function(e,totalpost) {
+                  val.totalpost = totalpost;
+                   finalData.push(val);
+               
+                     j++;
+
+                     if(j==len) {
+                        console.log(finalData);
+                        return res.json({success: true, data: finalData});
+                     }
+                    
+                  });
+
+              
+
+
+            });
+
+          }
+        });
+       
+        
       }
     });
   } else {
@@ -84,7 +148,9 @@ module.exports.latestTopic = function (params, res, app) {
     Topics.findOne({ subcategories: params.subcatId })
     .sort({"createdOn": -1})
     .exec(function(err,restop) {
+
       console.log("first Result : ", err);
+      console.log(restop.title);
       console.log(" Result : ", restop);
       if (err) {
         //res.status(400);
@@ -95,9 +161,12 @@ module.exports.latestTopic = function (params, res, app) {
       if(restop){
         console.log("latestTopic: ", restop);
         if(restop != '') {
+          returnObj.id = restop._id;
           returnObj.title = restop.title;
           returnObj.createdby = restop.createdBy;
           returnObj.createdOn = restop.createdOn;
+          returnObj.parentId = restop.parent;
+          returnObj.type = restop.type;
             Topics.count({"subcategories": params.subcatId, "parent": null}, function(e,totalthread) {
               console.log("totalthread: "+totalthread);
               returnObj.totalThread = totalthread;
@@ -144,13 +213,100 @@ module.exports.latestTopic = function (params, res, app) {
   
 }
 
+
+module.exports.topicList = function (params, res, app) {  
+  var query = ''
+   if(params.subcatId) {
+    if(params.maincatId){
+      query = "parentcat : "+ params.maincatId +", subcategories : "+ params.subcatId;
+    } else {
+      query = "subcategories : "+ params.subcatId;
+    }
+    
+    var returnObj = {};
+    Topics.find({ subcategories: params.subcatId, parent: null })
+    .exec(function(err,restop) {
+      
+      if (err) {
+        //res.status(400);
+        console.log("err: ",err);
+        return res.json( { success: false, error: "There are no topics" } );
+      }
+
+      if(restop){
+        console.log("Final topic List: ", restop);
+        if(restop != '') {
+          var len = restop.length;
+          var j=0;
+          var finalData = Array();
+          restop.forEach(function(val, key){
+              val = val.toObject();
+              Topics.count({"parent": val._id}, function(e,totalReply) {
+                val.totalReply = totalReply;
+                if(totalReply > 0) {
+                  Topics.findOne({ parent: val._id })
+                  .sort({"createdOn": -1})
+                  .exec(function(err,lastTopic) {
+                    val.lastTopic = lastTopic;
+                    finalData.push(val);
+                    j++;
+                    if(len == j) {
+                      return res.json({success: true, data: finalData});    
+                    }
+                    
+                  });
+
+                } else {
+                  console.log("Second FInal ");
+                  console.log(val);
+
+                   finalData.push(val);
+                  j++;
+                    if(len == j) {
+                      return res.json({success: true, data: finalData});  
+                    }
+                }
+                
+              });
+            });
+           // return res.json({success: true, data: restop});
+        } else {
+          console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+        
+
+        
+      } else {
+          console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+    });
+
+  } else {
+    
+    return res.json( { success: false, error: "There are no topics" } );
+
+  }
+    
+  
+}
+
 module.exports.updateTopic = function (data, res, app) {  
   var updateString = '';
+  var query = '';
   if(data.likes) {
-    updateString = {$inc : {'likes' : 1}};
+    updateString = {$inc : {'likes' : 1}, $push : {'likesUsers': data.userId}};
+    query = {_id: data.topicId, likesUsers: { $ne : data.userId}};
   }
   if(data.dislikes) {
-    updateString = {$inc : {'dislikes' : -1}};
+    updateString = {$inc : {'dislikes' : 1}, $push : {'dislikesUsers': data.userId}};
+    query = {_id: data.topicId, dislikesUsers: { $ne : data.userId}, likesUsers: { $ne : data.userId}};
+  }
+
+  if(data.spam) {
+    updateString = {$inc : {'spam' : 1}, $push : {'spamUsers': data.userId}};
+    query = {_id: data.topicId, likesUsers: { $ne : data.userId}, spamUsers: { $ne : data.userId}};
   }
 
   if(data.sticky) {
@@ -169,9 +325,12 @@ module.exports.updateTopic = function (data, res, app) {
   if(data.unresolved) {
     updateString = {'resolved': 'N', 'resolvedBy': '', 'resolvedOn': ''};
   }
+  if(query=='') {
+    query = {_id: data.topicId};
+  }
 
   if(data.topicId) {
-    Topics.update({_id: data.topicId}, updateString, {multi: false}, function (err, resData) {
+    Topics.update(query, updateString, {multi: false}, function (err, resData) {
       if(err) return res.json({success: false, error: err});
       if(resData) return res.json({success: true, data: resData});
     });  
