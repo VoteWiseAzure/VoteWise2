@@ -10,6 +10,8 @@ var bcrypt = require('bcrypt');
 var async = require('async');
 var mailer = require('../middleware/mailer');
 var jwt = require('jsonwebtoken');
+var fs = require('fs');
+var path = require('path');
 
 var helpers = require('./controllers');
 
@@ -263,25 +265,37 @@ module.exports.removeCategory = function ( id, res, app ) {
   .exec(function ( err, resData ) {
     if (err) return res.json({success: false, error: err});
     if (resData) {
-  
-      Category.remove({_id: id}, function ( err, delData ) {
+      Category.find({_id: id}, {"icon_image": 1}).lean()
+      .exec(function ( err, catData ) {
         if (err) return res.json({success: false, error: err});
-        if (delData) res.json({success: true, data: delData});
-      });
+        if (catData){
+          console.log("*** catData: ", catData);
+          if(catData.length > 0 && catData[0].icon_image){
+            console.log("removing image file");
+            var file_loc = path.join(__dirname, '../uploads/', catData[0].icon_image);
+            console.log("file_loc: ",file_loc);
+            fs.unlinkSync(file_loc);
+          }
 
+          Category.remove({"_id": id}, function ( err, delData ) {
+            if (err) return res.json({success: false, error: err});
+            if (delData) res.json({success: true, data: delData});
 
-      Category.find({ parentIds: { $elemMatch: { pid: id } } }, {_id: 1})
-      .exec(function ( err, selData ) {
-        if(selData){
-          selData.forEach(function(val, key){
-            //remove subcategories if any
-            console.log("* subcategories: ", val._id);
-            Category.update({_id: val._id},
-              { $pull:  {parentIds: { pid: id }} },
-              {multi: true})
-            .exec(function ( err, delData2 ) {
-              if (err) return res.json({success: false, error: err});
-              if (delData2) console.log("deleted key: "+key+" delData: "+delData2);;
+            Category.find({ parentIds: { $elemMatch: { pid: id } } }, {_id: 1})
+            .exec(function ( err, selData ) {
+              if(selData){
+                selData.forEach(function(val, key){
+                  //remove subcategories if any
+                  console.log("* subcategories: ", val._id);
+                  Category.update({_id: val._id},
+                    { $pull:  {parentIds: { pid: id }} },
+                    {multi: true})
+                  .exec(function ( err, delData2 ) {
+                    if (err) return res.json({success: false, error: err});
+                    if (delData2) console.log("deleted key: "+key+" delData: "+delData2);;
+                  });
+                });
+              }
             });
           });
         }

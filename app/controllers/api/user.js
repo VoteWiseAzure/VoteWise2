@@ -81,6 +81,11 @@ module.exports = function (app) {
                     success: true,
                     message: 'Logged In...',
                     name: user.username,
+                    admin: user.admin,
+                    politician: user.politician,
+                    advocate: user.advocate,
+                    press: user.press,
+                    voter: user.voter,
                     id: user._id,
                     token: token
                 });

@@ -14,57 +14,74 @@ module.exports = function( app ) {
   app.post('/questions/create', function(req, res) {
     var params = req.body;
     
-      var verifydRes = commonHelpers.verfiyRequiredFields(['author', 'content', "categoryIds"], req.body, res); //verify require fields
-      if(!verifydRes.success){
-        return res.json(verifydRes);
-      }
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+    if(!token){
+      return res.status(403).send({ 
+          success: false, 
+          error: 'No token provided.' 
+      }); 
+    }
 
-      modelHelpers.isValidUser(params.author, function (isValidAuthor) {
-        if(isValidAuthor){
-          var arrCatIds = params.categoryIds ? params.categoryIds.split(",") : [];
-          var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
-          
-          if(arrCatIds.length != arrViewOrders.length){
-            return res.json({success: false, error: "Category ids length is not matching with the order's list."});
-          }
+    var verifydRes = commonHelpers.verfiyRequiredFields(['content', "categoryIds"], req.body, res); //verify require fields
+    if(!verifydRes.success){
+      return res.json(verifydRes);
+    }
 
-          modelHelpers.isValidCategoryIds(arrCatIds, function(isValidCategory) {
-            if(isValidCategory){
-              modelHelpers.storeQuestion(params.author, params.content, arrCatIds, arrViewOrders, res, app);
+    commonHelpers.getUserFromToken(token, app, function(tokenData){
+      if(tokenData.success){
+        var authorId = tokenData.data._id;
+        modelHelpers.isValidUser(authorId, function (isValidAuthor) {
+          if(isValidAuthor){
+            var arrCatIds = params.categoryIds ? params.categoryIds.split(",") : [];
+            var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+            
+            if(arrCatIds.length != arrViewOrders.length){
+              return res.json({success: false, error: "Category ids length is not matching with the order's list."});
             }
-            else{
-              return res.json({success: false, error: "Invalid category IDs."});
-            }
-          });
-        }
-        else{
-          return res.json({success: false, error: "Author ID is invalid."});
-        }
-      });
-      /*
-      var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
-      var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
 
-      if(arrParentIds.length != arrViewOrders.length){
-        return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
-      }
-
-      if(params.parentIds){
-        modelHelpers.isValidParentIds(arrParentIds, function(isValid) {
-          if(isValid){
-            // Stores category in db
-            modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
+            modelHelpers.isValidCategoryIds(arrCatIds, function(isValidCategory) {
+              if(isValidCategory){
+                modelHelpers.storeQuestion(authorId, params.content, arrCatIds, arrViewOrders, res, app);
+              }
+              else{
+                return res.json({success: false, error: "Invalid category IDs."});
+              }
+            });
           }
           else{
-            return res.json({success: false, error: "Invalid parentIds"});
+            return res.json({success: false, error: "Author ID is invalid."});
           }
         });
       }
       else{
-        // Stores category in db
-        modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
+        return res.json({success: false, data: tokenData.data});
       }
-      */
+    });
+
+    /*
+    var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
+    var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+
+    if(arrParentIds.length != arrViewOrders.length){
+      return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
+    }
+
+    if(params.parentIds){
+      modelHelpers.isValidParentIds(arrParentIds, function(isValid) {
+        if(isValid){
+          // Stores category in db
+          modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
+        }
+        else{
+          return res.json({success: false, error: "Invalid parentIds"});
+        }
+      });
+    }
+    else{
+      // Stores category in db
+      modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, res, app);
+    }
+    */
   });
 
   app.post('/questions/update', function(req, res) {

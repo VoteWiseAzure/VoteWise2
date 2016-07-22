@@ -1,6 +1,7 @@
 var User = require('../models/user');
 var Questions = require('../models/questions');
 var Answers = require('../models/answers');
+var Category = require('../models/categories');
 var async = require('async');
 
 var saltRounds = 10;
@@ -95,7 +96,7 @@ module.exports.storeAnswer = function (author, questionId, importance, answer, c
   //return res.json({success: true, data: "Yes!"});
 
   var answer = new Answers({
-    author: author,
+    author: author._id,
     question: questionId,
     importance: importance,
     answer: answer,
@@ -108,8 +109,29 @@ module.exports.storeAnswer = function (author, questionId, importance, answer, c
       //res.status(400);
       return res.json( { success: false, error: err } );
     }
-
     if(resData){
+      var updateQuery = {};
+      if(author.politician){
+        updateQuery["$push"] = {"politician_answer": author._id};
+      }
+      if(author.voter){
+        updateQuery["$push"] = {"voter_answer": author._id};
+      }
+      if(author.advocate){
+        updateQuery["$push"] = {"advocate_answer": author._id};
+      }
+      if(author.press){
+        updateQuery["$push"] = {"press_answer": author._id}; 
+      }
+
+      updateQuery["$inc"] = { "total_answers": 1};
+
+      Questions.update({"_id": questionId}, updateQuery)
+      .exec(function(err, qupdate){
+        if(err) console.log("failed to update question");
+        if(qupdate) console.log("question updated");
+      });
+
       return res.json({success: true, data: resData});
     }
   });
@@ -230,10 +252,59 @@ module.exports.getPopularAnswers = function (categoryIds, authorData, res, app) 
 module.exports.removeAnswer = function ( id, res, app ) {
 
   console.log("removeAnswer: ", id);
+  Answers.find({"_id": id}, {"author": 1, "question": 1})
+  .lean()
+  .exec(function(err, ansdata){
+    if (err) return res.json({success: false, error: err});
+    if (ansdata){
+      Answers.remove({_id: id}, function ( err, delData ) {
+          if (err) return res.json({success: false, error: err});
+          if (delData){
+            if(ansdata && ansdata.length > 0){
+              ansdata = ansdata[0];
+              /*
+              Questions.update({"_id": ansdata.question}, {total_answers: 0, voter_answer: []})
+              .exec(function(err, qupdate){
+                if(err) console.log("failed to update question");
+                if(qupdate) console.log("question updated");
+              });
+              */
+              
+              User.find({"_id": ansdata.author}, {})
+              .exec(function(err, userdata){
+                if(userdata && userdata.length > 0){
+                  userdata = userdata[0];
 
-  Answers.remove({_id: id}, function ( err, delData ) {
-        if (err) res.json({success: false, error: err});
-        if (delData) res.json({success: true, data: delData});
+                  console.log("userdata: ",userdata);
+
+                  var updateQuery = {};
+                  if(userdata.politician){
+                    updateQuery["$pull"] = {"politician_answer": {"$in": [userdata._id]}};
+                  }
+                  if(userdata.voter){
+                    updateQuery["$pull"] = {"voter_answer": {"$in": [userdata._id]}};
+                  }
+                  if(userdata.advocate){
+                    updateQuery["$pull"] = {"advocate_answer": {"$in": [userdata._id]}};
+                  }
+                  if(userdata.press){
+                    updateQuery["$pull"] = {"press_answer": {"$in": [userdata._id]}}; 
+                  }
+
+                  updateQuery["$inc"] = { "total_answers": -1};
+
+                  Questions.update({"_id": ansdata.question}, updateQuery)
+                  .exec(function(err, qupdate){
+                    if(err) console.log("failed to update question");
+                    if(qupdate) console.log("question updated");
+                  });
+                }
+              });
+            }// if ansdata.author
+            res.json({success: true, data: delData});
+          }
+      });
+    }//if data
   });
 }
 
@@ -516,4 +587,160 @@ module.exports.getCompareAnswersNew = function (user, params, userIds, res, app)
   */
   //--------------------------------------
 
+}
+
+module.exports.getOverallMatch = function (user, params, userIds, res, app) {
+  console.log("** getOverallMatch **");
+  var id = "5784fecb8236ca4e26d994dd";
+  Category.find({"parentIds.pid": id}, {})
+  .lean()
+  .exec(function(err, catdata){
+    if(err) return res.json({success: false ,data: err});
+    if(catdata){
+      cat_uids = [];
+      catdata.forEach(function(cd, key){
+        cat_uids.push(cd._id);
+      });
+      Questions.find({"categories.cid": {"$in": cat_uids}}).lean()
+      .exec(function(err, qData){
+        if(err) return res.json({success: false ,data: err});
+        if(qData){
+
+        }
+      });  
+    }
+    return res.json({success: true, data: data});    
+  });
+  // return res.json({success: true, data: null});
+}
+
+module.exports.getOverallMatchOld = function (user, params, userIds, res, app) {
+  console.log("** getOverallMatch **");
+  
+  var userQuery = {};
+
+  if(!userIds || userIds.length <= 0){
+    switch(params.compare_with){
+      case 'politician':
+        userQuery.politician = true;
+      break;
+      case 'voter':
+        userQuery.voter = true;
+      break;
+      case 'advocate':
+        userQuery.advocate = true;
+      break;
+      case 'press':
+        userQuery.press = true;
+      break;
+    }
+  }
+  else{
+    userQuery = {"_id": {"$in": userIds}};
+  }
+
+  console.log("userQuery: ",userQuery);
+
+  var categoryIds = params.categoryIds ? params.categoryIds.split(",") : [];
+  var catQuery = {};
+  if(categoryIds.length > 0){
+    catQuery = {"categories.cid": { $in: categoryIds }};
+  }
+
+
+  return res.json({success: true, data: null});
+
+  /*
+  Questions.find(catQuery, {})
+  .lean()
+  .exec(function(err, quesData){
+    console.log("** got questions data **");
+    if(err) return res.json({success: false, error: err});
+    if(quesData) {
+      User.find(userQuery, {"_id": 1, "name": 1})
+      .lean()
+      .exec(function(err, userData){
+        // if(err) return res.json({success: false, error: err});
+        
+        // var selUserIds = [];
+        // if(userData) {
+        //   userData.forEach(function(uVal, key){
+        //     selUserIds.push(uVal._id);
+        //   });
+        // }
+
+        var getAnswerByUserIds = function(question_id, userData, compareObj, cb){
+          
+          var anserArray = [];
+          async.forEachOf(userData, function (user_data, key, callback) {
+            
+            Answers.find({"question": question_id, "author": user_data._id}, {})
+            .exec(function(err, ansData){
+              if(err) console.log("err: ",err);
+              if(ansData && ansData.length > 0){
+                anserArray.push({
+                  // author: user_data,
+                  "author": user_data,
+                  "_id": ansData[0]._id,
+                  "created": ansData[0].created,
+                  "comment": ansData[0].comment,
+                  "answer": ansData[0].answer,
+                  "importance": ansData[0].importance,
+                  "match": 100-20*(Math.abs(compareObj.answer-ansData[0].answer))
+                });
+              }
+              callback();
+            });
+          }, function (err) {
+              if (err) console.error(err.message);
+              cb(anserArray);
+          });
+        };
+
+        var tempQArr = [];
+
+        async.forEachOf(quesData, function (question, key, callback) {
+            Answers.find({author: user._id, "question": question._id})
+            .lean()
+            .exec(function(err, compareObj){
+              if(compareObj && compareObj.length > 0){
+                getAnswerByUserIds(question._id, userData, compareObj[0], function(obj){
+                  tempQArr.push({
+                    "_id": question._id,
+                    "content": question.content,
+                    "categories": question.categories,
+                    "my_answer": {
+                      // author: user,
+                      "_id": compareObj[0]._id,
+                      "author": compareObj[0].author,
+                      "created": compareObj[0].created,
+                      "comment": compareObj[0].comment,
+                      "answer": compareObj[0].answer,
+                      "importance": compareObj[0].importance
+                    },
+                    "answers": obj
+                  });
+                  callback();  
+                });
+              }
+              else{
+                // tempQArr.push({
+                //   _id: question._id,
+                //   content: question.content,
+                //   my_answer: null,
+                //   answers: null
+                // });
+                callback();
+              }
+            });
+          //return callback("exceptino"); //intrupt the loop
+        }, function (err) {
+          if (err) console.error(err.message);
+          //all traversed
+          return res.json({success: true, data: tempQArr});
+        });
+      });
+    }//if quesData
+  });
+  */
 }
