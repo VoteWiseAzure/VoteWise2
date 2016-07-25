@@ -12,6 +12,7 @@ module.exports = mongoose.model('Questions', new Schema({
     categories: [{
 		cid: {
 			type: Schema.Types.ObjectId, ref: 'Category',
+            index: true
 		},
 		viewOrder: Number
     }],
