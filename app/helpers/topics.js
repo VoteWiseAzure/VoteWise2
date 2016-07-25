@@ -16,8 +16,8 @@ var helpers = require('./controllers');
 
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
-  console.log("Store called");
-  console.log(data);
+  //console.log("Store called");
+  //console.log(data);
   var topic = new Topics();
 
   topic.title = data.title;
@@ -42,13 +42,13 @@ module.exports.storeTopic = function (data, res, app) {
   topic.save( function ( err, topics ) {
     if (err) {
       //res.status(400);
-      console.log("err: ",err);
+      //console.log("err: ",err);
       return res.json( { success: false, error: "Unable to add Topic" } );
     }
 
     if(topics){
-      console.log("Final Result ");
-      console.log(topics);
+      //console.log("Final Result ");
+      //console.log(topics);
       return res.json({success: true, data: topics});
     }
   });
@@ -60,13 +60,13 @@ module.exports.getOnlyTopic = function (params, res, app) {
     .exec(function(err,restop) {
       if (err) {
         //res.status(400);
-        console.log("err: ",err);
+        //console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
 
       if(restop){
-        console.log("========getOnlyTopic=========");
-        console.log(restop);
+        //console.log("========getOnlyTopic=========");
+        //console.log(restop);
         return res.json({success: true, data: restop});
       }
     });
@@ -76,15 +76,15 @@ module.exports.getOnlyTopic = function (params, res, app) {
 }
 
 module.exports.getTopic = function (params, res, app) {  
-  console.log("GetTopic Called");
-  console.log(params);
+  //console.log("GetTopic Called");
+  //console.log(params);
   if(params.topicId){
     Topics.find({$or:[{"_id": params.topicId, "parent": null}, {"parent": params.topicId}]})
     .sort({"createdOn": 1})
     .exec(function(err,restop) {
       if (err) {
         //res.status(400);
-        console.log("err: ",err);
+        //console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
 
@@ -92,8 +92,8 @@ module.exports.getTopic = function (params, res, app) {
         var finalData = Array();
         var len = restop.length;
         var j = 0;
-        console.log("GetTopic Result");
-        console.log(restop);
+        //console.log("GetTopic Result");
+        //console.log(restop);
         restop.forEach(function(val, key){
           val = val.toObject();
           if(val.createdBy.id){
@@ -112,7 +112,7 @@ module.exports.getTopic = function (params, res, app) {
                      j++;
 
                      if(j==len) {
-                        console.log(finalData);
+                        //console.log(finalData);
                         return res.json({success: true, data: finalData});
                      }
                     
@@ -143,23 +143,23 @@ module.exports.latestTopic = function (params, res, app) {
     } else {
       query = "subcategories : "+ params.subcatId;
     }
-    console.log(params.subcatId);
+    //console.log(params.subcatId);
     var returnObj = {};
     Topics.findOne({ subcategories: params.subcatId })
     .sort({"createdOn": -1})
     .exec(function(err,restop) {
 
-      console.log("first Result : ", err);
+      /*console.log("first Result : ", err);
       console.log(restop.title);
-      console.log(" Result : ", restop);
+      console.log(" Result : ", restop);*/
       if (err) {
         //res.status(400);
-        console.log("err: ",err);
+        //console.log("err: ",err);
         return res.json( { success: false, error: "There are no topics" } );
       }
 
       if(restop){
-        console.log("latestTopic: ", restop);
+        //console.log("latestTopic: ", restop);
         if(restop != '') {
           returnObj.id = restop._id;
           returnObj.title = restop.title;
@@ -168,20 +168,20 @@ module.exports.latestTopic = function (params, res, app) {
           returnObj.parentId = restop.parent;
           returnObj.type = restop.type;
             Topics.count({"subcategories": params.subcatId, "parent": null}, function(e,totalthread) {
-              console.log("totalthread: "+totalthread);
+              //console.log("totalthread: "+totalthread);
               returnObj.totalThread = totalthread;
               Topics.count({"subcategories": params.subcatId}, function(e,totalpost) {
-                console.log("totalpost: "+totalpost);
+                //console.log("totalpost: "+totalpost);
                 returnObj.totalPost = totalpost;
                 Topics.count({"subcategories": params.subcatId, type: 'B'}, function(e,brainstorming) {
-                  console.log("brainstorming: "+brainstorming);
+                  //console.log("brainstorming: "+brainstorming);
                   returnObj.brainstorming = brainstorming;
 
                   Topics.count({"subcategories": params.subcatId, type: 'S'}, function(e,solution) {
-                    console.log("solution: "+solution);
+                    //console.log("solution: "+solution);
                     returnObj.solution = solution;
-                    console.log("Final Obj---");
-                    console.log(returnObj);
+                    //console.log("Final Obj---");
+                    //console.log(returnObj);
                     return res.json({success: true, data: returnObj});
                   });
 
@@ -192,14 +192,14 @@ module.exports.latestTopic = function (params, res, app) {
           });
            // return res.json({success: true, data: restop});
         } else {
-          console.log("There are no topics");
+          //console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
         
 
         
       } else {
-          console.log("There are no topics");
+          //console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
     });
@@ -229,12 +229,12 @@ module.exports.topicList = function (params, res, app) {
       
       if (err) {
         //res.status(400);
-        console.log("err: ",err);
+        //console.log("err: ",err);
         return res.json( { success: false, error: "There are no topics" } );
       }
 
       if(restop){
-        console.log("Final topic List: ", restop);
+        //console.log("Final topic List: ", restop);
         if(restop != '') {
           var len = restop.length;
           var j=0;
@@ -257,8 +257,8 @@ module.exports.topicList = function (params, res, app) {
                   });
 
                 } else {
-                  console.log("Second FInal ");
-                  console.log(val);
+                  //console.log("Second FInal ");
+                  //console.log(val);
 
                    finalData.push(val);
                   j++;
@@ -271,14 +271,14 @@ module.exports.topicList = function (params, res, app) {
             });
            // return res.json({success: true, data: restop});
         } else {
-          console.log("There are no topics");
+          //console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
         
 
         
       } else {
-          console.log("There are no topics");
+          //console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
     });
@@ -290,6 +290,122 @@ module.exports.topicList = function (params, res, app) {
   }
     
   
+}
+
+module.exports.extraData = function(data, res, app) {
+  var params = JSON.parse(data.userData);
+  var fromDate = new Date(params.lastLogin);
+  console.log("Extra Data date");
+
+  //console.log(fromDate);
+  //My Discussions
+  Topics.find({ "createdBy.id":  params.id, "createdOn": {"$gte": params.lastLogin} })
+    .exec(function(err,userExtraTopic) {
+        var returnData = {};
+        returnData.MyDiscussion = userExtraTopic;
+        //Hot Topics
+        Topics.find({parent: {$ne: null}}, {})
+        .distinct("parent", function(err,hotTopics) {
+          console.log("hotTopics");
+          console.log(hotTopics);
+          var alen = hotTopics.length;
+              var x=0;
+              var activehotTopics = [];
+              if(alen > 0) {
+                 hotTopics.forEach(function(vala, akey){
+                    var aid = vala;
+                    console.log("First Final ID: "+aid);
+                    Topics.findOne({"_id": aid})
+                    .exec(function(erra,resacttop) {
+                      console.log(resacttop);
+                      activehotTopics.push(resacttop);
+
+
+                      x++;
+                      if(x==alen) {
+                        console.log("------------activehotTopics--------------");
+                        console.log(activehotTopics);
+                        returnData.HotTopics = activehotTopics;
+              
+                      }
+
+                    });
+                  });
+              } else {
+                returnData.HotTopics = activehotTopics;
+              }
+             
+          
+        //Active thread
+        Topics.aggregate([
+        {
+            "$match": {
+              "parent" : {$ne: null}
+            }
+        },
+        {
+            "$group": {
+                "_id": '$parent',
+                "parent": {"$sum": 1}
+            }
+            
+        },
+        { "$sort": {"parent": -1}},
+        { "$limit": 5 }],
+        function(e,totalActive) {
+            console.log("Active Data");
+            console.log(totalActive);
+            
+            if(totalActive) {
+              
+
+            if(totalActive.length > 0) {
+              console.log("inside greate 0");
+              var len = totalActive.length;
+              var j=0;
+              var activeData = [];
+              totalActive.forEach(function(val, key){
+                var id = val._id;
+                console.log("Final ID: "+id);
+                Topics.findOne({"_id": id})
+                .exec(function(err,restop) {
+                  activeData.push(restop);
+
+
+                  j++;
+                  if(j==len) {
+                    returnData.ActiveData = activeData;
+          
+                    res.json({success: true, data: returnData});
+                  }
+
+                });
+
+
+
+                
+              });
+              } else {
+                console.log("Inside first else");
+              returnData.ActiveData = totalActive;
+          
+              res.json({success: true, data: returnData});
+            }
+
+            } else {
+              console.log("Inside second else");
+              returnData.ActiveData = totalActive;
+              console.log(returnData);
+              res.json({success: true, data: returnData});
+            }
+            
+
+        });//Active thread End
+
+
+      });//Hot Topics End
+
+    });//My Discussions End
 }
 
 module.exports.updateTopic = function (data, res, app) {  
@@ -343,7 +459,7 @@ module.exports.updateTopic = function (data, res, app) {
 
 module.exports.removeTopic = function ( id, res, app ) {
 
-  console.log("removeTopic 1:", id);
+  //console.log("removeTopic 1:", id);
 
   Topics.find({"_id": id})
   .exec(function ( err, resData ) {

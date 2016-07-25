@@ -38,6 +38,8 @@ app.set('superSecret', config.secret); // secret variable
 // Allows cross origin requests =========
 // ======================================
 app.use(cors());
+//app.use(express.static(__dirname + '/public'));
+
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -70,5 +72,7 @@ mailer.apply( app );
 // =======================
 // start the server ======
 // =======================
+//app.use('/resources',express.static(__dirname + '/public'));
+app.use('/resources',express.static(__dirname + '/app/uploads'));
 app.listen(port);
 console.log('Magic happens at http://localhost:' + port);

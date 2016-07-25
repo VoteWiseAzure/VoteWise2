@@ -43,7 +43,7 @@ module.exports = function (app) {
         // Returns address model
         //var address = modelHelpers.storeAddress( params.city, params.street, params.zip, res );
 
-        // Stores user in db
+        // Stores user in db 
         // modelHelpers.storeUser( params, address, res, app );
 
         modelHelpers.createuser(req, res);
@@ -52,9 +52,17 @@ module.exports = function (app) {
 
 
     app.post('/user/logout', function (req, res) {
-        jwt.sign(user, app.get('superSecret'), {
-            expiresIn: '1440m' // expires in 24 hours
-        });
+        //var cur_date = new Date();
+        var cur_date = "2016-07-22T07:55:34.693Z";
+        console.log("User logout called");
+        User.update({_id: req.body.userid}, {'lastLogin': cur_date}, {multi: false}, function (err, resData) {
+          if(err) return res.json({success: false, error: err});
+          if(resData) return res.json({success: true, data: resData});
+          /*jwt.sign(user, app.get('superSecret'), {
+                expiresIn: '1440m' // expires in 24 hours
+            });*/
+        });  
+        
     });
 
     app.post('/user/authenticate', function (req, result) {
@@ -73,7 +81,8 @@ module.exports = function (app) {
                 var token = jwt.sign(user, app.get('superSecret'), {
                     expiresIn: '1440m' // expires in 24 hours
                 });
-
+                console.log("Final User Data");
+                console.log(user);
                 // If user is found and password is right
                 // create a token
                 // return the information including token as JSON
@@ -86,6 +95,7 @@ module.exports = function (app) {
                     advocate: user.advocate,
                     press: user.press,
                     voter: user.voter,
+                    lastLogin: user.lastLogin,
                     id: user._id,
                     token: token
                 });

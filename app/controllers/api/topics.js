@@ -13,16 +13,15 @@ module.exports = function( app ) {
 
   app.post('/topics/create', function(req, res) {
 
-    // Validations
-    var data = req.body;
-    console.log("=+++++++++++=");
-    
-    // var isValidZip = helpers.validZip( params.zip );
-    // var isValidEmail = helpers.validEmail( params.email );
-    // var isValidPassword = helpers.validPassword( params.password );
-    // var isValidUsername = helpers.validUsername( params.username );
-    // Uncomment this line for production, validations before database
-    // var allValid = helpers.allVallidate( isValidZip, isValidEmail, isValidPassword, isValidUsername );
+      // Validations
+      var data = req.body;
+      // console.log("=+++++++++++=");
+      // var isValidZip = helpers.validZip( params.zip );
+      // var isValidEmail = helpers.validEmail( params.email );
+      // var isValidPassword = helpers.validPassword( params.password );
+      // var isValidUsername = helpers.validUsername( params.username );
+      // Uncomment this line for production, validations before database
+      // var allValid = helpers.allVallidate( isValidZip, isValidEmail, isValidPassword, isValidUsername );
       // var allValid = true;
 
       // Returns address model
@@ -32,23 +31,18 @@ module.exports = function( app ) {
       if(!verifydRes.success){
         return res.json(verifydRes);
       }
-
-    
       modelHelpers.storeTopic(data, res, app);
-    
-
   });
 
   app.get('/topics/latest', function(req, res) {
     var params = req.query;
-    console.log("latest params : ",params);
+    //console.log("latest params : ",params);
     modelHelpers.latestTopic(params, res, app);
   });
 
   app.get('/topics/getList', function(req, res) {
     var params = req.query;
-    
-    console.log("Get List params : ",params);
+    //console.log("Get List params : ",params);
     modelHelpers.topicList(params, res, app);
   });
 
@@ -62,11 +56,20 @@ module.exports = function( app ) {
     modelHelpers.getOnlyTopic(params, res, app);
   });
 
+  app.get('/topics/getExtraData', function(req, res) {
+    var params = req.query;
+    console.log('getExtraData');
+
+    console.log(params);
+    console.log(params.userData);
+    modelHelpers.extraData(params, res, app);
+  });
+
   app.post('/topics/update', function(req, res) {
     var params = req.body;
-    console.log("update data called");
-    console.log(req.body);
-    console.log(params);
+    //console.log("update data called");
+    //console.log(req.body);
+    //console.log(params);
       var verifydRes = commonHelpers.verfiyRequiredFields(['topicId'], params, res); //verify require fields
       if(!verifydRes.success){
         return res.json(verifydRes);
@@ -78,7 +81,7 @@ module.exports = function( app ) {
 
   app.post('/topics/remove', function(req, res) {
     var params = req.body;
-    console.log(params);
+    //console.log(params);
 /*
       var verifydRes = commonHelpers.verfiyRequiredFields(['id'], params, res); //verify require fields
       if(!verifydRes.success){
