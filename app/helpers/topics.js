@@ -3,6 +3,7 @@ var User = require('../models/user');
 var Geo = require('../models/geoDivPa');
 var Advocate = require('../models/advocate');
 var Topics = require('../models/topics');
+var Category = require('../models/categories');
 
 var saltRounds = 10;
 var bcrypt = require('bcrypt');
@@ -16,8 +17,8 @@ var helpers = require('./controllers');
 
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
-  //console.log("Store called");
-  //console.log(data);
+  console.log("Store called");
+  console.log(data);
   var topic = new Topics();
 
   topic.title = data.title;
@@ -34,30 +35,37 @@ module.exports.storeTopic = function (data, res, app) {
   topic.likes = 0;
   topic.dislikes = 0;
   topic.spam = 0;
+
   if(data.parent) {
     topic.parent = data.parent;  
   }
-
+  console.log(topic);
   // Saving adress
-  topic.save( function ( err, topics ) {
+  topic.save( function ( err, ftopics ) {
     if (err) {
       //res.status(400);
       //console.log("err: ",err);
       return res.json( { success: false, error: "Unable to add Topic" } );
     }
 
-    if(topics){
-      //console.log("Final Result ");
-      //console.log(topics);
-      return res.json({success: true, data: topics});
+    if(ftopics){
+      console.log("Final Result ");
+      console.log(ftopics);
+      return res.json({success: true, data: ftopics});
     }
   });
+  
 }
 
 module.exports.getOnlyTopic = function (params, res, app) {  
+  console.log("Only topic");
+  console.log(params);
     if(params.topicId){
+      console.log("inside IF");
     Topics.findOne({"_id": params.topicId})
     .exec(function(err,restop) {
+      console.log(err);
+      console.log(restop);
       if (err) {
         //res.status(400);
         //console.log("err: ",err);
@@ -68,6 +76,8 @@ module.exports.getOnlyTopic = function (params, res, app) {
         //console.log("========getOnlyTopic=========");
         //console.log(restop);
         return res.json({success: true, data: restop});
+      } else {
+        return res.json( { success: false, error: "Unable to get Topic" } );
       }
     });
   } else {
@@ -76,18 +86,19 @@ module.exports.getOnlyTopic = function (params, res, app) {
 }
 
 module.exports.getTopic = function (params, res, app) {  
-  //console.log("GetTopic Called");
-  //console.log(params);
+  console.log("GetTopic Called");
+  console.log(params);
   if(params.topicId){
     Topics.find({$or:[{"_id": params.topicId, "parent": null}, {"parent": params.topicId}]})
-    .sort({"createdOn": 1})
+    .sort({'createdOn': 1})
     .exec(function(err,restop) {
       if (err) {
-        //res.status(400);
-        //console.log("err: ",err);
+        res.status(400);
+        console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
-
+      console.log("======================");
+      console.log(restop);
       if(restop){
         var finalData = Array();
         var len = restop.length;
@@ -165,7 +176,7 @@ module.exports.latestTopic = function (params, res, app) {
           returnObj.title = restop.title;
           returnObj.createdby = restop.createdBy;
           returnObj.createdOn = restop.createdOn;
-          returnObj.parentId = restop.parent;
+          returnObj.parent = restop.parent;
           returnObj.type = restop.type;
             Topics.count({"subcategories": params.subcatId, "parent": null}, function(e,totalthread) {
               //console.log("totalthread: "+totalthread);
@@ -180,9 +191,13 @@ module.exports.latestTopic = function (params, res, app) {
                   Topics.count({"subcategories": params.subcatId, type: 'S'}, function(e,solution) {
                     //console.log("solution: "+solution);
                     returnObj.solution = solution;
+                      Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
+                          returnObj.nextSubcat = subcat;
+                          return res.json({success: true, data: returnObj});
+                      });
                     //console.log("Final Obj---");
                     //console.log(returnObj);
-                    return res.json({success: true, data: returnObj});
+                    
                   });
 
                 });
@@ -297,18 +312,27 @@ module.exports.extraData = function(data, res, app) {
   var fromDate = new Date(params.lastLogin);
   console.log("Extra Data date");
 
-  //console.log(fromDate);
+  console.log(fromDate);
   //My Discussions
   Topics.find({ "createdBy.id":  params.id, "createdOn": {"$gte": params.lastLogin} })
     .exec(function(err,userExtraTopic) {
         var returnData = {};
+        console.log("===MyDiscussion===");
         returnData.MyDiscussion = userExtraTopic;
+        console.log(userExtraTopic);
         //Hot Topics
         Topics.find({parent: {$ne: null}}, {})
         .distinct("parent", function(err,hotTopics) {
-          console.log("hotTopics");
-          console.log(hotTopics);
-          var alen = hotTopics.length;
+              
+              console.log("hotTopics");
+              console.log(hotTopics);
+              
+              if(hotTopics.length <= 5) {
+                var alen = hotTopics.length;  
+              } else {
+                var alen = 0;
+              }
+          
               var x=0;
               var activehotTopics = [];
               if(alen > 0) {
@@ -319,8 +343,6 @@ module.exports.extraData = function(data, res, app) {
                     .exec(function(erra,resacttop) {
                       console.log(resacttop);
                       activehotTopics.push(resacttop);
-
-
                       x++;
                       if(x==alen) {
                         console.log("------------activehotTopics--------------");

@@ -28,6 +28,11 @@ module.exports = function (app) {
         taken = modelHelpers.isEmailTaken(email, res)
     });
 
+    app.get('/user/publicProfile', function (req, res) {
+        var id = req.query.id;
+        taken = modelHelpers.getpublicProfile(id, res)
+    });
+
     app.post('/user/signup', function (req, res) {
 
         // Validations
@@ -52,8 +57,8 @@ module.exports = function (app) {
 
 
     app.post('/user/logout', function (req, res) {
-        //var cur_date = new Date();
-        var cur_date = "2016-07-22T07:55:34.693Z";
+        var cur_date = new Date();
+        //var cur_date = "2016-07-22T07:55:34.693Z";
         console.log("User logout called");
         User.update({_id: req.body.userid}, {'lastLogin': cur_date}, {multi: false}, function (err, resData) {
           if(err) return res.json({success: false, error: err});

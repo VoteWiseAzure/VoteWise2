@@ -1,5 +1,8 @@
 var Address = require('../models/address');
 var User = require('../models/user');
+var Topics = require('../models/topics');
+var Questions = require('../models/questions');
+var Answers = require('../models/answers');
 var Geo = require('../models/geoDivPa');
 var Advocate = require('../models/advocate');
 
@@ -34,6 +37,59 @@ module.exports.isEmailTaken = function (email, res) {
         if (user) { return res.json({ taken: true }); }
 
         return res.json({ taken: false });
+    });
+}
+
+module.exports.getpublicProfile = function (id, res) {
+    var valid;
+    var returnData = {};
+    
+    console.log("id");
+    console.log(id);
+
+    User.findOne({
+        _id: id
+    }, {password: 0}, function (err, user) {
+        returnData.userData = user;
+        //get total posts by user
+        Topics.count({"createdBy.id": id}, function(e,totalpost) {
+          returnData.totalpost = totalpost;
+          //console.log("totalpost");
+           //console.log(returnData);
+           //get total threads created by user
+            Topics.count({"createdBy.id": id, "parent": null}, function(e,totalthread) {
+                //console.log("totalthread");
+              returnData.totalthread = totalthread;
+                //console.log(returnData);
+                //get total questions asked by user
+                Questions.count({"author.type": id}, function(e,totalQuestions) {
+                    //console.log("totalQuestions");
+                  returnData.totalquestions = totalQuestions;
+                   //console.log(returnData);
+                   //get total answered questions for user
+                    Answers.count({"author.type": id}, function(e,totalAnswers) {
+
+                      returnData.totalanswers = totalAnswers;
+                       //console.log("totalAnswers");
+                            //console.log(returnData);
+                            return res.json({success: true, data: returnData});
+                        
+                        
+                      });
+                    //get total answered questions for user end
+                    
+                    
+                  });
+                //get total questions asked by user end
+                
+                
+              });
+            //get total threads created by user end
+            
+            
+          });
+        //get total posts by user end
+
     });
 }
 
