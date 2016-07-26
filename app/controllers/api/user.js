@@ -191,6 +191,13 @@ module.exports = function (app) {
                     success: true,
                     message: 'Logged In...',
                     name: user.username,
+                    admin: user.admin,
+                    politician: user.politician,
+                    advocate: user.advocate,
+                    press: user.press,
+                    voter: user.voter,
+                    lastLogin: user.lastLogin,
+                    id: user._id,
                     token: token
                 });
             }
@@ -201,7 +208,7 @@ module.exports = function (app) {
     });
 
     
-    app.get('/user/list', function(req, res) {
+    app.get('/user/list', function(req, res) {        
         var params = req.query;
         
         var validUserTypes = ['politician', 'voter', 'advocate', 'press'];
