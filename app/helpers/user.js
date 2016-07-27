@@ -116,6 +116,8 @@ module.exports.createuser = function (req, res) {
 
     var usertype = req.body.type;
 
+    if(usertype) usertype = usertype.toLowerCase();
+
     var user = new User({
         password: req.body.password != '' ? md5(req.body.password) : '',
         admin: false,

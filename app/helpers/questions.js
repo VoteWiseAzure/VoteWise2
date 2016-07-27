@@ -173,7 +173,6 @@ module.exports.getQuestions = function (params, res, app) {
       if (resData) return res.json({success: true, data: resData});
     });
   }
-  
 }
 
 module.exports.removeQuestion = function ( id, res, app ) {

@@ -22,11 +22,24 @@ module.exports = mongoose.model('Category', new Schema({
       		type: Schema.ObjectId,
       		index: true
       	},
+        path: {
+          type: String,
+          index: true,
+          default: null
+        },
         viewOrder:{
         	type: Number,
         	default: 0
         }
       }
     ],
+    cat_type: {
+      type: String, //F = for forum,Q = for questoin, B = for both question and forum 
+      default: "B"
+    },
+    viewOrder: {
+      type: Number,
+      default: 0,
+    },
     created: { type: Date, default: Date.now }
 }));

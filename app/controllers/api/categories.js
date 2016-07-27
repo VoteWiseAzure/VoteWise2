@@ -63,18 +63,42 @@ module.exports = function( app ) {
           }
         }
 
-        var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
+        if(params.cat_type){
+          var valid_cat_type = ["B", "F", "Q"];
+          if(valid_cat_type.indexOf(params.cat_type) <= -1){
+            return res.json({"success": false, "error": "Invalid 'cat_type'."});
+          }
+        }
+
+        // var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
+        var arrParentIds = params.parentIds ? params.parentIds.split(";") : [];
         var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+
+        var allIds = [];
+        Array.prototype.unique = function() {
+            var a = this.concat();
+            for(var i=0; i<a.length; ++i) {
+                for(var j=i+1; j<a.length; ++j) {
+                    if(a[i] === a[j])
+                        a.splice(j--, 1);
+                }
+            }
+
+            return a;
+        };
+        arrParentIds.forEach(function(val, key){
+          allIds = allIds.concat(val.split(",")).unique();
+        });
 
         if(arrParentIds.length != arrViewOrders.length){
           return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
         }
 
         if(params.parentIds){
-          modelHelpers.isValidParentIds(arrParentIds, function(isValid) {
+          modelHelpers.isValidParentIds(allIds, function(isValid) {
             if(isValid){
               // Stores category in db
-              modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+              modelHelpers.storeCategory(params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
             }
             else{
               return res.json({success: false, error: "Invalid parentIds"});
@@ -88,10 +112,10 @@ module.exports = function( app ) {
             if(arrParentIds.length <= 0){
               arrParentIds = null;
             }
-            modelHelpers.updateCategory(params.id, params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+            modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
           }
           else
-            modelHelpers.storeCategory(params.title, params.description, arrParentIds, arrViewOrders, file_name, res, app);
+            modelHelpers.storeCategory(params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
         }
         
       }//else of file upload

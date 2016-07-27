@@ -35,7 +35,7 @@ module.exports.isValidParentIds = function ( ids, cb ) {
 }
 
 
-module.exports.storeCategory = function (title, description, parentIds, arrViewOrders, file_name, res, app) {
+module.exports.storeCategory_old = function (title, description, parentIds, arrViewOrders, file_name, res, app) {
   // Making new adress
   var tempParentIdsArr = [];
   var len = parentIds.length;
@@ -69,7 +69,42 @@ module.exports.storeCategory = function (title, description, parentIds, arrViewO
   });
 }
 
-module.exports.updateCategory = function (id, title, description, parentIds, arrViewOrders, file_name, res, app) {
+module.exports.storeCategory = function (title, description, cat_type, viewOrder, parentIds, arrViewOrders, file_name, res, app) {
+  var tempParentIdsArr = [];
+  var len = parentIds.length;
+  for(var i=0; i<len; i++){
+    var arr = parentIds[i].split(",");
+    tempParentIdsArr.push({
+      pid: arr[arr.length - 1],
+      path: ","+parentIds[i]+",",
+      viewOrder: arrViewOrders[i]
+    });
+  }
+
+  var category = new Category({
+    "title": title,
+    "description": description,
+    "cat_type": cat_type,
+    "viewOrder": viewOrder,
+    "parentIds": tempParentIdsArr,
+    "icon_image": file_name
+  });
+
+  // Saving adress
+  category.save( function ( err, category ) {
+    if (err) {
+      //res.status(400);
+      console.log("err: ",err);
+      return res.json( { success: false, error: "Unable to add category" } );
+    }
+    if(category){
+      return res.json({success: true, data: category});
+    }
+  });
+
+}//store category
+
+module.exports.updateCategory = function (id, title, description, cat_type, viewOrder, parentIds, arrViewOrders, file_name, res, app) {
   // Making new adress
   var tempParentIdsArr = [];
   if(parentIds){
@@ -87,7 +122,9 @@ module.exports.updateCategory = function (id, title, description, parentIds, arr
   if(title) updateObj["title"] = title;
   if(description) updateObj["description"] = description;
   if(parentIds) updateObj["parentIds"] = parentIds;
+  if(cat_type) updateObj["cat_type"] = cat_type;
   if(file_name) updateObj["icon_image"] = file_name;
+  if(viewOrder) updateObj["viewOrder"] = viewOrder;
   console.log("updateObj: ",updateObj);
   // Saving adress
   Category.update({"_id": id}, updateObj, function ( err, category ) {
@@ -104,6 +141,247 @@ module.exports.updateCategory = function (id, title, description, parentIds, arr
 }
 
 module.exports.getCategory = function (params, res, app) {
+  // list all categories
+  /*
+  Category.remove({}, function ( err, user ) {
+    if (err) console.log("unable to delte all");
+    if (user) console.log("delte all");
+  });
+  */
+
+  var count_questions_old = function (catList) {
+    var resArr = [];
+    async.forEachOf(catList, function (resCat, key, parentcallback) {
+
+      Category.find({"$or": [{"parentIds.pid": resCat._id}, {"_id": resCat._id}]}, {"_id": 1})
+      .lean()
+      .exec(function(err, catData){
+        if(catData){
+          var total_questions = 0;
+          async.forEachOf(catData, function (cat, key, callback) {
+              Questions.count({"categories.cid": cat._id})
+              .exec(function(err, countData){
+                var temp_counter = 0;
+                if(countData){
+                  temp_counter = countData;
+                }
+
+                total_questions += temp_counter;
+                callback();
+              });
+              //return callback("exceptino"); //intrupt the loop
+          }, function (err) {
+              if (err) console.error("count_questions err: ", err);
+              // resCat.total_questions = total_questions;
+              resArr.push({
+                "_id": resCat._id,
+                "title": resCat.title,
+                "created": resCat.created,
+                "cat_type": resCat.cat_type,
+                "order": resCat.viewOrder,
+                "parentIds": resCat.parentIds,
+                "description": resCat.description,
+                "icon_image": resCat.icon_image,
+                // "order": resCat.order, //if order is present add it
+                "total_questions": total_questions
+              });
+              // resCat.total_questions = total_questions;
+              // resArr.push(resCat);
+              parentcallback();
+          });
+        }
+        else{
+          // resArr.push(resCat);
+          // resCat.total_questions = 0;
+          
+          resArr.push({
+            "_id": resCat._id,
+            "title": resCat.title,
+            "created": resCat.created,
+            "parentIds": resCat.parentIds,
+            "description": resCat.description,
+            "icon_image": resCat.icon_image,
+            "total_questions": 0
+          });
+          
+          // resArr.push(resCat);
+          parentcallback();
+        }
+      });
+        //return callback("exceptino"); //intrupt the loop
+    }, function (err) {
+      if(params.parentId)//for subcategories sort by view order
+        return res.json({success: true, data: resArr.sort(helpers.keySort("order", 1))});
+      else
+        return res.json({success: true, data: resArr.sort(helpers.keySortByDate("created", 1))});
+    });
+    
+  };
+
+  var count_questions = function (catList) {
+    var resArr = [];
+    async.forEachOf(catList, function (resCat, key, parentcallback) {
+      var qur = new RegExp(","+resCat._id+",");
+      console.log("qur this 1: ",qur);
+      Category.find({"parentIds.path": qur}, {})
+      .exec(function(err, catData){
+        //get all subcategories of all levels
+        if(catData){
+          var cids = []; //store all subcategory ids
+          console.log("catData len: ",catData.length);
+          catData.forEach(function(val, key){
+            cids.push(val._id);
+          });
+
+          Questions.count({"categories.cid": {$in: cids}})
+          .exec(function(err, countData){
+            var total_questions = 0;
+            if(countData){
+              total_questions = countData;
+            }
+
+            resArr.push({
+                "_id": resCat._id,
+                "title": resCat.title,
+                "created": resCat.created,
+                "cat_type": resCat.cat_type,
+                "order": resCat.viewOrder,
+                "parentIds": resCat.parentIds,
+                "description": resCat.description,
+                "icon_image": resCat.icon_image,
+                // "order": resCat.order, //if order is present add it
+                "total_questions": total_questions
+              });
+              parentcallback();
+          });
+        }
+        else{
+          resArr.push({
+            "_id": resCat._id,
+            "title": resCat.title,
+            "created": resCat.created,
+            "parentIds": resCat.parentIds,
+            "description": resCat.description,
+            "icon_image": resCat.icon_image,
+            "total_questions": 0
+          });
+          parentcallback();
+        }
+      });
+        //return callback("exceptino"); //intrupt the loop
+    }, function (err) {
+      if(params.parentId)//for subcategories sort by view order
+        return res.json({success: true, data: resArr.sort(helpers.keySort("order", 1))});
+      else
+        return res.json({success: true, data: resArr.sort(helpers.keySortByDate("created", 1))});
+    });
+  };
+
+  var showQuestionCounter = (params.questions_counter == 1) ? true : false;
+
+  console.log("params: ",params);
+  if(params.parentId){
+    //show all the subcategories of given parent id
+    // searchParam = { parentIds: { $elemMatch: { pid: params.parentId } } };
+    
+    Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1}}, {$unwind: "$parentIds"})
+    // .sort({ "parentIds.viewOrder" : 1})
+    // .lean()
+    .exec(function ( err, resData ) {
+      if (err) return res.json({success: false, error: err});
+      // if (resData) return res.json({success: false, data: user});
+      if (resData){
+        var temp = [];
+        resData.forEach(function(val, key){
+          if(val.parentIds.pid == params.parentId){
+            var obj = val
+            obj.viewOrder = val.parentIds.viewOrder;
+            delete obj.parentIds;
+            temp.push(obj);
+          }
+        });
+        // return res.json({success: true, data: temp})
+        if(showQuestionCounter){
+          count_questions(temp);
+        }
+        else{
+          var tempArr = [];
+          temp.forEach(function(val, key){
+              var obj = val
+              obj.order = val.viewOrder;
+              delete obj.viewOrder;
+              // delete obj.parentIds;
+              tempArr.push(obj);
+          });
+          return res.json({success: true, data: tempArr});
+          // return res.json({success: true, data: temp});
+        }
+      }//if resData
+    });
+  }
+  else if(params.id){
+    Category.find({_id: params.id}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1})
+    .exec(function ( err, resData ) {
+      if (err) return res.json({success: false, error: err});
+      //if (resData) return res.json({success: true, data: resData});
+      if(resData && resData.length == 1){
+        return res.json({success: true, data: resData[0]});
+      }
+      else{
+        return res.json({success: true, data: null})
+      }
+    });
+  }
+  else if(params.root == 1){
+    //show all root categories
+    Category.find({parentIds: []}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1})
+    .lean()
+    .exec(function ( err, catData ) {
+      if (err) return res.json({success: false, error: err});
+      if(catData && showQuestionCounter){
+        count_questions(catData);
+      }
+      else{
+        var tempArr = [];
+        catData.forEach(function(val, key){
+            var obj = val
+            obj.order = val.viewOrder;
+            delete obj.viewOrder;
+            // delete obj.parentIds;
+            tempArr.push(obj);
+        });
+        return res.json({success: true, data: tempArr});
+        //  return res.json({success: true, data: catData});        
+      }
+      // if (catData) return res.json({success: true, data: catData});
+    });
+  }
+  else{
+    //show all categories
+    Category.find({}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1})
+    .lean()
+    .exec(function ( err, catData ) {
+      if (err) return res.json({success: false, error: err});
+      // if (catData) return res.json({success: true, data: catData});
+      if(catData && showQuestionCounter){
+        count_questions(catData);
+      }
+      else{
+        var tempArr = [];
+        catData.forEach(function(val, key){
+            var obj = val
+            obj.order = val.viewOrder;
+            delete obj.viewOrder;
+            // delete obj.parentIds;
+            tempArr.push(obj);
+        });
+        return res.json({success: true, data: tempArr});
+      }
+    });
+  }
+}
+
+module.exports.getCategoryNew_for_testing = function (params, res, app) {
   // list all categories
   /*
   Category.remove({}, function ( err, user ) {
@@ -175,8 +453,7 @@ module.exports.getCategory = function (params, res, app) {
         return res.json({success: true, data: resArr.sort(helpers.keySort("order", 1))});
       else
         return res.json({success: true, data: resArr.sort(helpers.keySortByDate("created", 1))});
-    });
-    
+    }); 
   };
 
   var showQuestionCounter = (params.questions_counter == 1) ? true : false;
@@ -186,16 +463,22 @@ module.exports.getCategory = function (params, res, app) {
     //show all the subcategories of given parent id
     // searchParam = { parentIds: { $elemMatch: { pid: params.parentId } } };
     
-    Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1}}, {$unwind: "$parentIds"})
+    // Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1}}, {$unwind: "$parentIds"})
     // .sort({ "parentIds.viewOrder" : 1})
     // .lean()
+    var qur = new RegExp("^,"+params.parentId+",$");
+    console.log("qur this 1: ",qur);
+    // /^,579716066e3408a40fe24130,/
+    // Category.find({"parentIds.path": qur}, {})
+    Category.aggregate({"$match": {"parentIds.path": qur}}, {$unwind: "$parentIds"})
+    .sort({ "parentIds.viewOrder" : 1})
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
       // if (resData) return res.json({success: false, data: user});
       if (resData){
         var temp = [];
         resData.forEach(function(val, key){
-          if(val.parentIds.pid == params.parentId){
+          if(qur.test(val.parentIds.path)){
             var obj = val
             obj.order = val.parentIds.viewOrder;
             delete obj.parentIds;
@@ -209,6 +492,8 @@ module.exports.getCategory = function (params, res, app) {
         else{
           return res.json({success: true, data: temp});
         }
+        console.log("----------------- resData ---------------------");
+         // return res.json({success: true, data: resData});
       }//if resData
     });
   }
