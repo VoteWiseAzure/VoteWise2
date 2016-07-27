@@ -91,4 +91,11 @@ module.exports = function( app ) {
       modelHelpers.removeTopic(params.id, res, app);
 
   });
+  
+  app.get('/topics/removeAll', function(req, res) {
+    
+    modelHelpers.removeAllTopic(res, app);
+  });
+  
+  
 }

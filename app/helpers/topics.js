@@ -17,17 +17,27 @@ var helpers = require('./controllers');
 
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
-  console.log("Store called");
-  console.log(data);
+  //console.log("Store called");
+  //console.log(data);
   var topic = new Topics();
 
   topic.title = data.title;
   topic.description = data.description;
   topic.parentcat = data.parentcat;
-  topic.subcategories = data.subcategories;
+  //console.log("Type OF ");
+  //console.log(typeof data.subcategories);
+  if (typeof data.subcategories === 'string') {
+    var subcat = data.subcategories;
+    var sub = subcat.split(",");
+    topic.subcategories = sub;
+  } else {
+    topic.subcategories = data.subcategories;  
+  }
+  
   topic.createdBy = {
     id: data.createdById,
-    name: data.createdByName
+    name: data.createdByName,
+    utype: data.createdByType,
   };
   topic.createdOn = new Date();
   topic.restrictedTo = data.restrictedTo;
@@ -39,7 +49,7 @@ module.exports.storeTopic = function (data, res, app) {
   if(data.parent) {
     topic.parent = data.parent;  
   }
-  console.log(topic);
+  //console.log(topic);
   // Saving adress
   topic.save( function ( err, ftopics ) {
     if (err) {
@@ -49,8 +59,8 @@ module.exports.storeTopic = function (data, res, app) {
     }
 
     if(ftopics){
-      console.log("Final Result ");
-      console.log(ftopics);
+      //console.log("Final Result ");
+      //console.log(ftopics);
       return res.json({success: true, data: ftopics});
     }
   });
@@ -58,14 +68,14 @@ module.exports.storeTopic = function (data, res, app) {
 }
 
 module.exports.getOnlyTopic = function (params, res, app) {  
-  console.log("Only topic");
-  console.log(params);
+  //console.log("Only topic");
+  //console.log(params);
     if(params.topicId){
-      console.log("inside IF");
+      //console.log("inside IF");
     Topics.findOne({"_id": params.topicId})
     .exec(function(err,restop) {
-      console.log(err);
-      console.log(restop);
+      //console.log(err);
+      //console.log(restop);
       if (err) {
         //res.status(400);
         //console.log("err: ",err);
@@ -86,19 +96,19 @@ module.exports.getOnlyTopic = function (params, res, app) {
 }
 
 module.exports.getTopic = function (params, res, app) {  
-  console.log("GetTopic Called");
-  console.log(params);
+  //console.log("GetTopic Called");
+  //console.log(params);
   if(params.topicId){
-    Topics.find({$or:[{"_id": params.topicId, "parent": null}, {"parent": params.topicId}]})
+    Topics.find({$or:[{"_id": params.topicId}, {"parent": params.topicId}]})
     .sort({'createdOn': 1})
     .exec(function(err,restop) {
       if (err) {
         res.status(400);
-        console.log("err: ",err);
+        //console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
-      console.log("======================");
-      console.log(restop);
+      //console.log("======================");
+      //console.log(restop);
       if(restop){
         var finalData = Array();
         var len = restop.length;
@@ -154,15 +164,16 @@ module.exports.latestTopic = function (params, res, app) {
     } else {
       query = "subcategories : "+ params.subcatId;
     }
+    //console.log("=========$$$$Latest Topic$$$========================");
     //console.log(params.subcatId);
     var returnObj = {};
     Topics.findOne({ subcategories: params.subcatId })
     .sort({"createdOn": -1})
     .exec(function(err,restop) {
 
-      /*console.log("first Result : ", err);
-      console.log(restop.title);
-      console.log(" Result : ", restop);*/
+      //console.log("first Result : ", err);
+      
+      //console.log(" Result : ", restop);
       if (err) {
         //res.status(400);
         //console.log("err: ",err);
@@ -193,10 +204,12 @@ module.exports.latestTopic = function (params, res, app) {
                     returnObj.solution = solution;
                       Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
                           returnObj.nextSubcat = subcat;
+                          /*console.log("subcat: "+subcat);
+                          console.log("Final Obj---");
+                          console.log(returnObj);*/
                           return res.json({success: true, data: returnObj});
                       });
-                    //console.log("Final Obj---");
-                    //console.log(returnObj);
+                    
                     
                   });
 
@@ -207,15 +220,38 @@ module.exports.latestTopic = function (params, res, app) {
           });
            // return res.json({success: true, data: restop});
         } else {
-          //console.log("There are no topics");
-          return res.json( { success: false, error: "There are no topics" } );
+          console.log("There are no topics outer");
+          Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
+                        returnObj.totalThread = 0;
+                        returnObj.totalPost = 0;
+                        returnObj.brainstorming = 0;
+                        returnObj.solution = 0;
+
+                          returnObj.nextSubcat = subcat;
+                          console.log("subcat: "+subcat);
+                          console.log("Final Obj---");
+                          console.log(returnObj);
+                          return res.json({success: true, data: returnObj});
+                      });
         }
         
 
         
       } else {
-          //console.log("There are no topics");
-          return res.json( { success: false, error: "There are no topics" } );
+          console.log("There are no topics outer");
+          Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
+                        returnObj.totalThread = 0;
+                        returnObj.totalPost = 0;
+                        returnObj.brainstorming = 0;
+                        returnObj.solution = 0;
+
+                          returnObj.nextSubcat = subcat;
+                          console.log("subcat: "+subcat);
+                          console.log("Final Obj---");
+                          console.log(returnObj);
+                          return res.json({success: true, data: returnObj});
+                      });
+         
         }
     });
 
@@ -241,7 +277,7 @@ module.exports.topicList = function (params, res, app) {
     var returnObj = {};
     Topics.find({ subcategories: params.subcatId, parent: null })
     .exec(function(err,restop) {
-      
+     
       if (err) {
         //res.status(400);
         //console.log("err: ",err);
@@ -310,22 +346,15 @@ module.exports.topicList = function (params, res, app) {
 module.exports.extraData = function(data, res, app) {
   var params = JSON.parse(data.userData);
   var fromDate = new Date(params.lastLogin);
-  console.log("Extra Data date");
-
-  console.log(fromDate);
-  //My Discussions
+   //My Discussions
   Topics.find({ "createdBy.id":  params.id, "createdOn": {"$gte": params.lastLogin} })
     .exec(function(err,userExtraTopic) {
         var returnData = {};
-        console.log("===MyDiscussion===");
         returnData.MyDiscussion = userExtraTopic;
-        console.log(userExtraTopic);
         //Hot Topics
         Topics.find({parent: {$ne: null}}, {})
         .distinct("parent", function(err,hotTopics) {
               
-              console.log("hotTopics");
-              console.log(hotTopics);
               
               if(hotTopics.length <= 5) {
                 var alen = hotTopics.length;  
@@ -338,15 +367,11 @@ module.exports.extraData = function(data, res, app) {
               if(alen > 0) {
                  hotTopics.forEach(function(vala, akey){
                     var aid = vala;
-                    console.log("First Final ID: "+aid);
                     Topics.findOne({"_id": aid})
                     .exec(function(erra,resacttop) {
-                      console.log(resacttop);
                       activehotTopics.push(resacttop);
                       x++;
                       if(x==alen) {
-                        console.log("------------activehotTopics--------------");
-                        console.log(activehotTopics);
                         returnData.HotTopics = activehotTopics;
               
                       }
@@ -375,20 +400,16 @@ module.exports.extraData = function(data, res, app) {
         { "$sort": {"parent": -1}},
         { "$limit": 5 }],
         function(e,totalActive) {
-            console.log("Active Data");
-            console.log(totalActive);
             
             if(totalActive) {
               
 
             if(totalActive.length > 0) {
-              console.log("inside greate 0");
               var len = totalActive.length;
               var j=0;
               var activeData = [];
               totalActive.forEach(function(val, key){
                 var id = val._id;
-                console.log("Final ID: "+id);
                 Topics.findOne({"_id": id})
                 .exec(function(err,restop) {
                   activeData.push(restop);
@@ -408,16 +429,13 @@ module.exports.extraData = function(data, res, app) {
                 
               });
               } else {
-                console.log("Inside first else");
               returnData.ActiveData = totalActive;
           
               res.json({success: true, data: returnData});
             }
 
             } else {
-              console.log("Inside second else");
               returnData.ActiveData = totalActive;
-              console.log(returnData);
               res.json({success: true, data: returnData});
             }
             
@@ -479,6 +497,15 @@ module.exports.updateTopic = function (data, res, app) {
   
 }
 
+module.exports.removeAllTopic = function (res, app ) {
+
+  //console.log("removeTopic 1:", id);
+  Topics.remove({}, function ( err, delData ) {
+            if (err) return res.json({success: false, error: err});
+            if (delData) res.json({success: true, data: delData});
+          });
+}
+
 module.exports.removeTopic = function ( id, res, app ) {
 
   //console.log("removeTopic 1:", id);
@@ -487,11 +514,14 @@ module.exports.removeTopic = function ( id, res, app ) {
   .exec(function ( err, resData ) {
     if (err) return res.json({success: false, error: err});
     if (resData) {
-  
-      Topics.remove({_id: id}, function ( err, delData ) {
-        if (err) return res.json({success: false, error: err});
-        if (delData) res.json({success: true, data: delData});
+      Topics.remove({"parent": id}, function ( err, Data ) {
+           Topics.remove({_id: id}, function ( err, delData ) {
+            if (err) return res.json({success: false, error: err});
+            if (delData) res.json({success: true, data: delData});
+          });
       });
+     
+
     };//resData
   });//find
 }
