@@ -8,6 +8,7 @@ var jwt = require('jsonwebtoken');
 var helpers = require('../../helpers/controllers');
 var modelHelpers = require('../../helpers/questions');
 var commonHelpers = require('../../helpers/common');
+var config = require('../../../config'); // get config file
 
 module.exports = function( app ) {
 
@@ -121,7 +122,48 @@ module.exports = function( app ) {
 
   app.get('/questions/list', function(req, res) {
     var params = req.query;
-    modelHelpers.getQuestions(params, res, app);
+    if(params.tagged_by_role){
+      //get questions tagged my particular group of users
+      if(config.valid_user_roles.indexOf(params.tagged_by_role) <= -1)
+        return res.json({success: false , error: "Invalid 'tagged_by_role'. Valid values are: "+config.valid_user_roles.join(",")});
+      else
+        modelHelpers.getQuestionsByRole(params.tagged_by_role, res, app);
+    }
+    else if(params.tagged_to){
+      if(params.tagged_to == "me"){
+          var token = req.body.token || req.query.token || req.headers['x-access-token'];
+          if(!token){
+            return res.status(403).send({ 
+                success: false, 
+                error: 'No token provided.' 
+            }); 
+          }
+
+          commonHelpers.getUserFromToken(token, app, function(tokenData){
+            if(tokenData.success){
+              var author = tokenData.data;
+              modelHelpers.getQuestionsTaggedTo(author._id, res, app);
+            }
+            else{
+              return res.json({success: false, data: tokenData.data});
+            }
+          });
+      }
+      else{
+        var authorId = params.tagged_to;
+        modelHelpers.isValidUser(authorId, function (isValidAuthor) {
+          if(isValidAuthor){
+            modelHelpers.getQuestionsTaggedTo(authorId, res, app);
+          }
+          else{
+            return res.json({success: false, error: "User ID is invalid."});
+          }
+        });
+      }
+    }
+    else{
+      modelHelpers.getQuestions(params, res, app);
+    }
   });
 
   app.post('/questions/remove', function(req, res) {
@@ -135,5 +177,65 @@ module.exports = function( app ) {
 
       modelHelpers.removeQuestion(params.id, res, app);
 
+  });
+
+  app.post('/questions/add_tag', function(req, res) {
+    console.log("** tag questions **");
+    var params = req.body;
+      var token = req.body.token || req.query.token || req.headers['x-access-token'];
+      if(!token){
+        return res.status(403).send({ 
+            success: false, 
+            error: 'No token provided.' 
+        }); 
+      }
+
+      var verifydRes = commonHelpers.verfiyRequiredFields(['id', 'user_ids'], params, res); //verify require fields
+      if(!verifydRes.success){
+        return res.json(verifydRes);
+      }
+      var arrUserIds = params.user_ids ? params.user_ids.split(",") : [];
+
+      commonHelpers.getUserFromToken(token, app, function(tokenData){
+        console.log("got getUserFromToken: ",tokenData);
+        if(tokenData.success){
+          var author = tokenData.data;
+          modelHelpers.tagUserInQuestion(params.id, author, arrUserIds, res, app);
+          // return res.json({success: true, data: author});
+        }
+        else{
+          return res.json({success: false, data: tokenData.data});
+        }
+      });
+  });
+
+  app.post('/questions/remove_tag', function(req, res) {
+    console.log("** tag questions **");
+    var params = req.body;
+      var token = req.body.token || req.query.token || req.headers['x-access-token'];
+      if(!token){
+        return res.status(403).send({ 
+            success: false, 
+            error: 'No token provided.' 
+        }); 
+      }
+
+      var verifydRes = commonHelpers.verfiyRequiredFields(['id', 'user_ids'], params, res); //verify require fields
+      if(!verifydRes.success){
+        return res.json(verifydRes);
+      }
+      var arrUserIds = params.user_ids ? params.user_ids.split(",") : [];
+
+      commonHelpers.getUserFromToken(token, app, function(tokenData){
+        console.log("got getUserFromToken: ",tokenData);
+        if(tokenData.success){
+          var author = tokenData.data;
+          modelHelpers.removeTagUserFromQuestion(params.id, author, arrUserIds, res, app);
+          // return res.json({success: true, data: author});
+        }
+        else{
+          return res.json({success: false, data: tokenData.data});
+        }
+      });
   });
 }

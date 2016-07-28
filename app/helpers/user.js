@@ -141,7 +141,8 @@ module.exports.createuser = function (req, res) {
             console.log("User : " + user);
             var userId = encryptionhelper.encrypt(user._id.toString());
             var verifyUrl = req.body.verificationurl + "/" + userId;
-            emailHelpers.sendWelcomeEmail(req.body.username, req.body.email, verifyUrl);
+            var unsubscribeUrl = req.body.unsubscribeurl + "/" + userId;
+            emailHelpers.sendWelcomeEmail(req.body.username, req.body.email, verifyUrl, unsubscribeUrl);
             return res.json({ success: true, user: user });
         }
 

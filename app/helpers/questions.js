@@ -175,6 +175,63 @@ module.exports.getQuestions = function (params, res, app) {
   }
 }
 
+module.exports.getQuestionsByRole = function (user_role, res, app) {
+  console.log("** getQuestions **");
+
+  var query = {};
+  switch(user_role){
+      case 'politician':
+        query.politician = true;
+      break;
+      case 'voter':
+        query.voter = true;
+      break;
+      case 'advocate':
+        query.advocate = true;
+      break;
+      case 'press':
+        query.press = true;
+      break;
+  }
+  console.log("query: ",query);
+  var uids_arr = [];
+  User.find(query, {_id: 1})
+  .lean()
+  .exec(function(err, users){
+    if(err) return res.json({success: false, error: err});
+    if(users){
+
+      users.forEach(function(val, key){
+        uids_arr.push(val._id);
+      });
+
+      console.log("uids_arr: ",uids_arr);
+
+      Questions.find({"tagged_users.tagged_by" : {"$in": uids_arr}})
+      .exec(function(err, qdata){
+        if(err) return res.json({success: false, error: err});
+        if(qdata){
+          return res.json({success: true, data: qdata});
+        }
+      });
+
+      // return res.json({success: true, uids: uids_arr});  
+    }//if users
+  });
+}
+
+module.exports.getQuestionsTaggedTo = function (user_id, res, app) {
+  console.log("** getQuestionsTaggedTo **: ",user_id);
+
+  Questions.find({"tagged_users.tagged_to" : user_id})
+  .exec(function(err, qdata){
+    if(err) return res.json({success: false, error: err});
+    if(qdata){
+      return res.json({success: true, data: qdata});
+    }
+  });
+}
+
 module.exports.removeQuestion = function ( id, res, app ) {
 
   console.log("removeQuestion: ", id);
@@ -183,4 +240,89 @@ module.exports.removeQuestion = function ( id, res, app ) {
         if (err) res.json({success: false, error: err});
         if (delData) res.json({success: true, data: delData});
   });
+}
+
+
+module.exports.tagUserInQuestion = function ( id, author, arrUserIds, res, app ) {
+
+  console.log("tagUserInQuestion: ", author._id);
+
+  // Questions.remove({_id: id}, function ( err, delData ) {
+  //       if (err) res.json({success: false, error: err});
+  //       if (delData) res.json({success: true, data: delData});
+  // });
+  var tempArr = [];
+  arrUserIds.forEach(function(val, key){
+    tempArr.push({
+      "tagged_by": author._id,
+      "tagged_to": val
+    });
+  });
+
+  /*Questions.find({"tagged_users": {"$in": tempArr}}, {_id: 1, tagged_users: 1})
+  .exec(function(err, data){
+    console.log("err: ",err);
+    console.log("data: ",data);
+  });*/
+  
+  /*Questions.update({"_id": id}, {"tagged_users": []})
+  .exec(function(err, data){
+    if(err) console.log("------- error updated ----------"); ;
+    if(data){
+     console.log("------- updated ----------"); 
+    }
+  });*/
+
+  
+  Questions.update({"_id": id}, {"$addToSet": {"tagged_users": { "$each": tempArr}}})
+  .exec(function(err, data){
+    if(err) res.json({"success": false, "data": err});
+    if(data){
+     return res.json({"success": true, "data": "Tagged Successfully."});
+    }
+  });
+  
+  // return res.json({success: true, data: tempArr})
+}
+
+module.exports.removeTagUserFromQuestion = function ( id, author, arrUserIds, res, app ) {
+
+  console.log("tagUserInQuestion: ", author._id);
+
+  // Questions.remove({_id: id}, function ( err, delData ) {
+  //       if (err) res.json({success: false, error: err});
+  //       if (delData) res.json({success: true, data: delData});
+  // });
+  var tempArr = [];
+  arrUserIds.forEach(function(val, key){
+    tempArr.push({
+      "tagged_by": author._id,
+      "tagged_to": val
+    });
+  });
+
+  /*Questions.find({"tagged_users": {"$in": tempArr}}, {_id: 1, tagged_users: 1})
+  .exec(function(err, data){
+    console.log("err: ",err);
+    console.log("data: ",data);
+  });*/
+  
+  /*Questions.update({"_id": id}, {"tagged_users": []})
+  .exec(function(err, data){
+    if(err) console.log("------- error updated ----------"); ;
+    if(data){
+     console.log("------- updated ----------"); 
+    }
+  });*/
+
+  
+  Questions.update({"_id": id}, {"$pull": {"tagged_users": { "$in": tempArr}}}, {multiple: true})
+  .exec(function(err, data){
+    if(err) res.json({"success": false, "data": err});
+    if(data){
+     return res.json({"success": true, "data": "Removed Successfully"}) 
+    }
+  });
+  
+  // return res.json({success: true, data: tempArr})
 }

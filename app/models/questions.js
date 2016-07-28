@@ -21,5 +21,18 @@ module.exports = mongoose.model('Questions', new Schema({
     advocate_answer: [], //array user id's of
     press_answer: [], //array user id's of
     total_answers: { type: Number, default: 0 }, //array user id's of
-    created: { type: Date, default: Date.now }
+    created: { type: Date, default: Date.now },
+    tagged_users: [
+        {
+            tagged_by: {
+                type: Schema.Types.ObjectId, ref: 'User',
+                index: true
+            },
+            tagged_to: {
+                type: Schema.Types.ObjectId, ref: 'User',
+                index: true
+            },
+            _id: false
+        }
+    ]
 }));

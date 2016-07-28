@@ -34,7 +34,6 @@ module.exports = function (app) {
     });
 
     app.post('/user/signup', function (req, res) {
-
         // Validations
         //var params = req.body;
         // var isValidZip = helpers.validZip( params.zip );
@@ -52,9 +51,7 @@ module.exports = function (app) {
         // modelHelpers.storeUser( params, address, res, app );
 
         modelHelpers.createuser(req, res);
-
     });
-
 
     app.post('/user/logout', function (req, res) {
         var cur_date = new Date();
@@ -166,6 +163,15 @@ module.exports = function (app) {
         //});
     });
 
+    app.post('/user/unsubscribe-email', function (req, result) {
+        var id = req.body.salt;
+        id = encryptionhelper.decrypt(id);
+        User.findOneAndUpdate({ _id: id }, { "email_unsubscribed": true }, null, function (err) {
+            if (err) { return result.json(helpers.response(false, err)); };
+            result.json({success: true, data: "Unsubscribed successfully."});
+        });
+    });
+
     app.post('/user/authenticateEmail', function (req, result) {
 
         User.findOne({
@@ -208,7 +214,7 @@ module.exports = function (app) {
     });
 
     
-    app.get('/user/list', function(req, res) {        
+    app.get('/user/list', function(req, res) { 
         var params = req.query;
         
         var validUserTypes = ['politician', 'voter', 'advocate', 'press'];
