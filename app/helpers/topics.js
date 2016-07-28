@@ -17,15 +17,15 @@ var helpers = require('./controllers');
 
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
-  //console.log("Store called");
-  //console.log(data);
+  ////console.log("Store called");
+  ////console.log(data);
   var topic = new Topics();
 
   topic.title = data.title;
   topic.description = data.description;
   topic.parentcat = data.parentcat;
-  //console.log("Type OF ");
-  //console.log(typeof data.subcategories);
+  ////console.log("Type OF ");
+  ////console.log(typeof data.subcategories);
   if (typeof data.subcategories === 'string') {
     var subcat = data.subcategories;
     var sub = subcat.split(",");
@@ -49,18 +49,18 @@ module.exports.storeTopic = function (data, res, app) {
   if(data.parent) {
     topic.parent = data.parent;  
   }
-  //console.log(topic);
+  ////console.log(topic);
   // Saving adress
   topic.save( function ( err, ftopics ) {
     if (err) {
       //res.status(400);
-      //console.log("err: ",err);
+      ////console.log("err: ",err);
       return res.json( { success: false, error: "Unable to add Topic" } );
     }
 
     if(ftopics){
-      //console.log("Final Result ");
-      //console.log(ftopics);
+      ////console.log("Final Result ");
+      ////console.log(ftopics);
       return res.json({success: true, data: ftopics});
     }
   });
@@ -68,23 +68,23 @@ module.exports.storeTopic = function (data, res, app) {
 }
 
 module.exports.getOnlyTopic = function (params, res, app) {  
-  //console.log("Only topic");
-  //console.log(params);
+  ////console.log("Only topic");
+  ////console.log(params);
     if(params.topicId){
-      //console.log("inside IF");
+      ////console.log("inside IF");
     Topics.findOne({"_id": params.topicId})
     .exec(function(err,restop) {
-      //console.log(err);
-      //console.log(restop);
+      ////console.log(err);
+      ////console.log(restop);
       if (err) {
         //res.status(400);
-        //console.log("err: ",err);
+        ////console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
 
       if(restop){
-        //console.log("========getOnlyTopic=========");
-        //console.log(restop);
+        ////console.log("========getOnlyTopic=========");
+        ////console.log(restop);
         return res.json({success: true, data: restop});
       } else {
         return res.json( { success: false, error: "Unable to get Topic" } );
@@ -96,25 +96,25 @@ module.exports.getOnlyTopic = function (params, res, app) {
 }
 
 module.exports.getTopic = function (params, res, app) {  
-  //console.log("GetTopic Called");
-  //console.log(params);
+  ////console.log("GetTopic Called");
+  ////console.log(params);
   if(params.topicId){
     Topics.find({$or:[{"_id": params.topicId}, {"parent": params.topicId}]})
     .sort({'createdOn': 1})
     .exec(function(err,restop) {
       if (err) {
         res.status(400);
-        //console.log("err: ",err);
+        ////console.log("err: ",err);
         return res.json( { success: false, error: "Unable to get Topic" } );
       }
-      //console.log("======================");
-      //console.log(restop);
+      ////console.log("======================");
+      ////console.log(restop);
       if(restop){
         var finalData = Array();
         var len = restop.length;
         var j = 0;
-        //console.log("GetTopic Result");
-        //console.log(restop);
+        ////console.log("GetTopic Result");
+        ////console.log(restop);
         restop.forEach(function(val, key){
           val = val.toObject();
           if(val.createdBy.id){
@@ -133,7 +133,7 @@ module.exports.getTopic = function (params, res, app) {
                      j++;
 
                      if(j==len) {
-                        //console.log(finalData);
+                        ////console.log(finalData);
                         return res.json({success: true, data: finalData});
                      }
                     
@@ -164,24 +164,24 @@ module.exports.latestTopic = function (params, res, app) {
     } else {
       query = "subcategories : "+ params.subcatId;
     }
-    //console.log("=========$$$$Latest Topic$$$========================");
-    //console.log(params.subcatId);
+    ////console.log("=========$$$$Latest Topic$$$========================");
+    ////console.log(params.subcatId);
     var returnObj = {};
     Topics.findOne({ subcategories: params.subcatId })
     .sort({"createdOn": -1})
     .exec(function(err,restop) {
 
-      //console.log("first Result : ", err);
+      ////console.log("first Result : ", err);
       
-      //console.log(" Result : ", restop);
+      ////console.log(" Result : ", restop);
       if (err) {
         //res.status(400);
-        //console.log("err: ",err);
+        ////console.log("err: ",err);
         return res.json( { success: false, error: "There are no topics" } );
       }
 
       if(restop){
-        //console.log("latestTopic: ", restop);
+        ////console.log("latestTopic: ", restop);
         if(restop != '') {
           returnObj.id = restop._id;
           returnObj.title = restop.title;
@@ -190,23 +190,23 @@ module.exports.latestTopic = function (params, res, app) {
           returnObj.parent = restop.parent;
           returnObj.type = restop.type;
             Topics.count({"subcategories": params.subcatId, "parent": null}, function(e,totalthread) {
-              //console.log("totalthread: "+totalthread);
+              ////console.log("totalthread: "+totalthread);
               returnObj.totalThread = totalthread;
               Topics.count({"subcategories": params.subcatId}, function(e,totalpost) {
-                //console.log("totalpost: "+totalpost);
+                ////console.log("totalpost: "+totalpost);
                 returnObj.totalPost = totalpost;
                 Topics.count({"subcategories": params.subcatId, type: 'B'}, function(e,brainstorming) {
-                  //console.log("brainstorming: "+brainstorming);
+                  ////console.log("brainstorming: "+brainstorming);
                   returnObj.brainstorming = brainstorming;
 
                   Topics.count({"subcategories": params.subcatId, type: 'S'}, function(e,solution) {
-                    //console.log("solution: "+solution);
+                    ////console.log("solution: "+solution);
                     returnObj.solution = solution;
                       Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
                           returnObj.nextSubcat = subcat;
-                          /*console.log("subcat: "+subcat);
-                          console.log("Final Obj---");
-                          console.log(returnObj);*/
+                          /*//console.log("subcat: "+subcat);
+                          //console.log("Final Obj---");
+                          //console.log(returnObj);*/
                           return res.json({success: true, data: returnObj});
                       });
                     
@@ -220,7 +220,7 @@ module.exports.latestTopic = function (params, res, app) {
           });
            // return res.json({success: true, data: restop});
         } else {
-          console.log("There are no topics outer");
+          //console.log("There are no topics outer");
           Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
                         returnObj.totalThread = 0;
                         returnObj.totalPost = 0;
@@ -228,9 +228,9 @@ module.exports.latestTopic = function (params, res, app) {
                         returnObj.solution = 0;
 
                           returnObj.nextSubcat = subcat;
-                          console.log("subcat: "+subcat);
-                          console.log("Final Obj---");
-                          console.log(returnObj);
+                          //console.log("subcat: "+subcat);
+                          //console.log("Final Obj---");
+                          //console.log(returnObj);
                           return res.json({success: true, data: returnObj});
                       });
         }
@@ -238,7 +238,7 @@ module.exports.latestTopic = function (params, res, app) {
 
         
       } else {
-          console.log("There are no topics outer");
+          //console.log("There are no topics outer");
           Category.findOne({"parentIds.pid": params.subcatId }, function(ed,subcat) {
                         returnObj.totalThread = 0;
                         returnObj.totalPost = 0;
@@ -246,9 +246,9 @@ module.exports.latestTopic = function (params, res, app) {
                         returnObj.solution = 0;
 
                           returnObj.nextSubcat = subcat;
-                          console.log("subcat: "+subcat);
-                          console.log("Final Obj---");
-                          console.log(returnObj);
+                          //console.log("subcat: "+subcat);
+                          //console.log("Final Obj---");
+                          //console.log(returnObj);
                           return res.json({success: true, data: returnObj});
                       });
          
@@ -280,12 +280,12 @@ module.exports.topicList = function (params, res, app) {
      
       if (err) {
         //res.status(400);
-        //console.log("err: ",err);
+        ////console.log("err: ",err);
         return res.json( { success: false, error: "There are no topics" } );
       }
 
       if(restop){
-        //console.log("Final topic List: ", restop);
+        ////console.log("Final topic List: ", restop);
         if(restop != '') {
           var len = restop.length;
           var j=0;
@@ -308,8 +308,8 @@ module.exports.topicList = function (params, res, app) {
                   });
 
                 } else {
-                  //console.log("Second FInal ");
-                  //console.log(val);
+                  ////console.log("Second FInal ");
+                  ////console.log(val);
 
                    finalData.push(val);
                   j++;
@@ -322,14 +322,77 @@ module.exports.topicList = function (params, res, app) {
             });
            // return res.json({success: true, data: restop});
         } else {
-          //console.log("There are no topics");
+          ////console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
         
 
         
       } else {
-          //console.log("There are no topics");
+          ////console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+    });
+
+  } else {
+    
+    return res.json( { success: false, error: "There are no topics" } );
+
+  }
+    
+  
+}
+
+
+module.exports.topicSearch = function (params, res, app) {  
+  
+   if(params.query) {
+    var query = params.query;
+    
+    //onsole.log(finalQuery);
+    var returnObj = {};
+    //{$text: {$search: searchString}}
+    Topics.find({$text: {$search: query}})
+    .exec(function(err,restop) {
+     //console.log(restop);
+      if (err) {
+        //res.status(400);
+        ////console.log("err: ",err);
+        return res.json( { success: false, error: "There are no topics" } );
+      }
+
+      if(restop){
+        //console.log("Final topic List: ", restop);
+        if(restop != '') {
+          var len = restop.length;
+          var j=0;
+          var finalData = Array();
+          restop.forEach(function(val, key){
+              val = val.toObject();
+              Category.findOne({"_id": val.parentcat }, function(ed,category) {
+                         val.category = category;
+                          /*//console.log("subcat: "+subcat);
+                          //console.log("Final Obj---");
+                          //console.log(returnObj);*/
+                          //console.log(val);
+                          finalData.push(val);
+                          j++;
+                          if(len == j) {
+                            return res.json({success: true, data: finalData});    
+                          }
+                      });
+              
+            });
+           // return res.json({success: true, data: restop});
+        } else {
+          ////console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+        
+
+        
+      } else {
+          ////console.log("There are no topics");
           return res.json( { success: false, error: "There are no topics" } );
         }
     });
@@ -354,14 +417,13 @@ module.exports.extraData = function(data, res, app) {
         //Hot Topics
         Topics.find({parent: {$ne: null}}, {})
         .distinct("parent", function(err,hotTopics) {
-              
-              
+               
               if(hotTopics.length <= 5) {
                 var alen = hotTopics.length;  
               } else {
                 var alen = 0;
               }
-          
+   
               var x=0;
               var activehotTopics = [];
               if(alen > 0) {
@@ -499,7 +561,7 @@ module.exports.updateTopic = function (data, res, app) {
 
 module.exports.removeAllTopic = function (res, app ) {
 
-  //console.log("removeTopic 1:", id);
+  ////console.log("removeTopic 1:", id);
   Topics.remove({}, function ( err, delData ) {
             if (err) return res.json({success: false, error: err});
             if (delData) res.json({success: true, data: delData});
@@ -508,7 +570,7 @@ module.exports.removeAllTopic = function (res, app ) {
 
 module.exports.removeTopic = function ( id, res, app ) {
 
-  //console.log("removeTopic 1:", id);
+  ////console.log("removeTopic 1:", id);
 
   Topics.find({"_id": id})
   .exec(function ( err, resData ) {

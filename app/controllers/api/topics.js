@@ -46,6 +46,12 @@ module.exports = function( app ) {
     modelHelpers.topicList(params, res, app);
   });
 
+  app.get('/topics/search', function(req, res) {
+    var params = req.query;
+    console.log("Topics Search : ",params);
+    modelHelpers.topicSearch(params, res, app);
+  });
+
   app.get('/topics/getone', function(req, res) {
     var params = req.query;
     modelHelpers.getTopic(params, res, app);

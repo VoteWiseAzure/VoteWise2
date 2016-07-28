@@ -2,8 +2,11 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
+
 // set up a mongoose model and pass it using module.exports
-module.exports = mongoose.model('Topics', new Schema({
+
+
+var topicsSchema = new Schema({
     title: {type: String, required :true},
     description: {type: String, required :true},
     parentcat: {type: Schema.Types.ObjectId, ref: 'Category' },
@@ -25,4 +28,12 @@ module.exports = mongoose.model('Topics', new Schema({
     resolvedOn: { type: Date, default: Date.now },
     restrictedTo: { type: String, required :true },
     parent: { type: Schema.ObjectId, index: true }
-}));
+});
+
+topicsSchema.index({
+    description: 'text',
+    title: 'text'
+});
+
+
+module.exports = mongoose.model('Topics', topicsSchema);
