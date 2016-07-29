@@ -12,8 +12,8 @@ var mailer = require('../middleware/mailer');
 var jwt = require('jsonwebtoken');
 
 var helpers = require('./controllers');
-
-
+var mongoose = require('mongoose');
+var ObjectID = mongoose.Types.ObjectId;
 
 module.exports.storeTopic = function (data, res, app) {
   // Making new adress
@@ -100,7 +100,7 @@ module.exports.getTopic = function (params, res, app) {
   ////console.log(params);
   if(params.topicId){
     Topics.find({$or:[{"_id": params.topicId}, {"parent": params.topicId}]})
-    .sort({'createdOn': 1})
+    .sort({'_id': 1})
     .exec(function(err,restop) {
       if (err) {
         res.status(400);
@@ -116,6 +116,7 @@ module.exports.getTopic = function (params, res, app) {
         ////console.log("GetTopic Result");
         ////console.log(restop);
         restop.forEach(function(val, key){
+
           val = val.toObject();
           if(val.createdBy.id){
             User.findOne({
@@ -128,7 +129,21 @@ module.exports.getTopic = function (params, res, app) {
 
                 Topics.count({"createdBy.id": user._id}, function(e,totalpost) {
                   val.totalpost = totalpost;
-                   finalData.push(val);
+
+                    if(val.sticky=="Y") {
+                      //console.log(val.stickyOrder);
+                      //console.log(val);
+                      val.orderPost = val.stickyOrder;
+                      //console.log("IF : ", key);
+                      finalData.splice(val.stickyOrder, 0, val);
+                    } else {
+                      val.orderPost = key;
+                      //console.log("Else : ", key);
+                      finalData.push(val);
+                    }
+
+
+                   
                
                      j++;
 
@@ -406,106 +421,243 @@ module.exports.topicSearch = function (params, res, app) {
   
 }
 
+
+module.exports.topicAdvanceSearch = function (data, res, app) {  
+  var params = data;
+  console.log(params);
+   //if(params.text) {
+    var query = {};
+    if(params.text) {
+      query.$text = {$search: params.text};
+    }
+
+    if(params.time) {
+      switch(params.time) {
+        case 'Past hour' : 
+                      var timestamp = new Date(Date.now() - 1 * 60 * 60 * 1000);
+                      break;
+        case 'Last 24hrs' : 
+                      var timestamp = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                      break;
+        case 'Last week' : 
+                      var timestamp = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                      break;
+        case 'Last month' : 
+                      var timestamp = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                      break;
+        case 'Last year' : 
+                      var timestamp = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+                      break;
+        default : 
+                  var timestamp = '';
+                  break;
+      }
+      if(timestamp!='') {
+        console.log("Time start");
+        console.log(timestamp);
+        var hexSeconds = Math.floor(timestamp/1000).toString(16);
+        console.log(hexSeconds);
+        var constructedObjectId = ObjectID(hexSeconds + "0000000000000000");
+        console.log(constructedObjectId);
+        query._id = {"$gt" : constructedObjectId};  
+        console.log("Time End");
+      }
+      
+    }
+
+    
+    if(params.location) {
+      query.location = params.location;
+    }
+
+    if(params.user) {
+      var user = '';
+      switch(params.user) {
+        case 'All Press' : 
+                      user = 'press';
+                      break;
+        case 'All Advocates' : 
+                      user = 'advocate';
+                      break;
+        case 'All Politicians' : 
+                      user = 'politician';
+                      break;
+        default : 
+                  user = '';
+                  break;
+      }
+      
+
+      if(user!="") {
+        var usertype = "createdBy.utype";
+        console.log(usertype);
+        query["createdBy.utype"] = user;  
+      }
+      
+    }
+
+ 
+    var returnObj = {};
+    //{$text: {$search: searchString}}
+    console.log(query);
+    Topics.find(query)
+    .exec(function(err,restop) {
+    
+      if (err) {
+        //res.status(400);
+        ////console.log("err: ",err);
+        return res.json( { success: false, error: "There are no topics" } );
+      }
+
+      if(restop){
+        //console.log("Final topic List: ", restop);
+        if(restop != '') {
+          var len = restop.length;
+          var j=0;
+          var finalData = Array();
+          restop.forEach(function(val, key){
+              val = val.toObject();
+              Category.findOne({"_id": val.parentcat }, function(ed,category) {
+                         val.category = category;
+                          /*//console.log("subcat: "+subcat);
+                          //console.log("Final Obj---");
+                          //console.log(returnObj);*/
+                          //console.log(val);
+                          finalData.push(val);
+                          j++;
+                          if(len == j) {
+                            return res.json({success: true, data: finalData});    
+                          }
+                      });
+              
+            });
+           // return res.json({success: true, data: restop});
+        } else {
+          ////console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+        
+
+        
+      } else {
+          ////console.log("There are no topics");
+          return res.json( { success: false, error: "There are no topics" } );
+        }
+    });
+
+  
+    
+  
+}
+
 module.exports.extraData = function(data, res, app) {
   var params = JSON.parse(data.userData);
   var fromDate = new Date(params.lastLogin);
    //My Discussions
-  Topics.find({ "createdBy.id":  params.id, "createdOn": {"$gte": params.lastLogin} })
-    .exec(function(err,userExtraTopic) {
-        var returnData = {};
-        returnData.MyDiscussion = userExtraTopic;
-        //Hot Topics
-        Topics.find({parent: {$ne: null}}, {})
-        .distinct("parent", function(err,hotTopics) {
-               
-              if(hotTopics.length <= 5) {
-                var alen = hotTopics.length;  
-              } else {
-                var alen = 0;
-              }
-   
-              var x=0;
-              var activehotTopics = [];
-              if(alen > 0) {
-                 hotTopics.forEach(function(vala, akey){
-                    var aid = vala;
-                    Topics.findOne({"_id": aid})
-                    .exec(function(erra,resacttop) {
-                      activehotTopics.push(resacttop);
-                      x++;
-                      if(x==alen) {
-                        returnData.HotTopics = activehotTopics;
-              
-                      }
-
-                    });
-                  });
-              } else {
-                returnData.HotTopics = activehotTopics;
-              }
-             
-          
-        //Active thread
-        Topics.aggregate([
-        {
-            "$match": {
-              "parent" : {$ne: null}
-            }
-        },
-        {
-            "$group": {
-                "_id": '$parent',
-                "parent": {"$sum": 1}
-            }
-            
-        },
-        { "$sort": {"parent": -1}},
-        { "$limit": 5 }],
-        function(e,totalActive) {
-            
-            if(totalActive) {
-              
-
-            if(totalActive.length > 0) {
-              var len = totalActive.length;
-              var j=0;
-              var activeData = [];
-              totalActive.forEach(function(val, key){
-                var id = val._id;
-                Topics.findOne({"_id": id})
-                .exec(function(err,restop) {
-                  activeData.push(restop);
-
-
-                  j++;
-                  if(j==len) {
-                    returnData.ActiveData = activeData;
-          
-                    res.json({success: true, data: returnData});
-                  }
-
-                });
-
-
-
+  //Topics.find({ "createdBy.id":  params.id, "createdOn": {"$gte": params.lastLogin} }, {"parent":1})
+  Topics.find({ "createdBy.id":  params.id }, {"parent":1})
+    .exec(function(err,docs) {
+      // Map the docs into an array of just the _ids
+        
+        var parentids = docs.map(function(doc) { return doc.parent; });
+        Topics.find({ "parent":  {"$in": parentids}, "createdOn": {"$gte": params.lastLogin} } )
+        .exec(function(err,userExtraTopic) {
+          var returnData = {};
+          returnData.MyDiscussion = userExtraTopic;
+          //Hot Topics
+          Topics.find({parent: {$ne: null}}, {})
+          .distinct("parent", function(err,hotTopics) {
+                 
+                if(hotTopics.length <= 5) {
+                  var alen = hotTopics.length;  
+                } else {
+                  var alen = 0;
+                }
+     
+                var x=0;
+                var activehotTopics = [];
+                if(alen > 0) {
+                   hotTopics.forEach(function(vala, akey){
+                      var aid = vala;
+                      Topics.findOne({"_id": aid})
+                      .exec(function(erra,resacttop) {
+                        activehotTopics.push(resacttop);
+                        x++;
+                        if(x==alen) {
+                          returnData.HotTopics = activehotTopics;
                 
-              });
-              } else {
-              returnData.ActiveData = totalActive;
-          
-              res.json({success: true, data: returnData});
-            }
+                        }
 
-            } else {
-              returnData.ActiveData = totalActive;
-              res.json({success: true, data: returnData});
-            }
+                      });
+                    });
+                } else {
+                  returnData.HotTopics = activehotTopics;
+                }
+               
             
+          //Active thread
+          Topics.aggregate([
+          {
+              "$match": {
+                "parent" : {$ne: null}
+              }
+          },
+          {
+              "$group": {
+                  "_id": '$parent',
+                  "parent": {"$sum": 1}
+              }
+              
+          },
+          { "$sort": {"parent": -1}},
+          { "$limit": 5 }],
+          function(e,totalActive) {
+              
+              if(totalActive) {
+                
 
-        });//Active thread End
+              if(totalActive.length > 0) {
+                var len = totalActive.length;
+                var j=0;
+                var activeData = [];
+                totalActive.forEach(function(val, key){
+                  var id = val._id;
+                  Topics.findOne({"_id": id})
+                  .exec(function(err,restop) {
+                    activeData.push(restop);
 
 
-      });//Hot Topics End
+                    j++;
+                    if(j==len) {
+                      returnData.ActiveData = activeData;
+            
+                      res.json({success: true, data: returnData});
+                    }
+
+                  });
+
+
+
+                  
+                });
+                } else {
+                returnData.ActiveData = totalActive;
+            
+                res.json({success: true, data: returnData});
+              }
+
+              } else {
+                returnData.ActiveData = totalActive;
+                res.json({success: true, data: returnData});
+              }
+              
+
+          });//Active thread End
+
+
+        });//Hot Topics End
+
+      });
 
     });//My Discussions End
 }
@@ -528,11 +680,16 @@ module.exports.updateTopic = function (data, res, app) {
   }
 
   if(data.sticky) {
-    updateString = {'sticky': 'Y'};
+    if(data.stickyOrder && data.stickyOrder > 0) {
+      updateString = {$inc : {'stickyOrder' : data.stickyOrder}, 'sticky': 'Y'};  
+    } else {
+      updateString = {$inc : {'stickyOrder' : 1}, 'sticky': 'Y'};  
+    }
+    
   }
 
   if(data.removeSticky) {
-    updateString = {'sticky': 'N'};
+    updateString = {'sticky': 'N', 'stickyOrder': 0};
   }
 
   if(data.resolved) {
@@ -546,11 +703,18 @@ module.exports.updateTopic = function (data, res, app) {
   if(query=='') {
     query = {_id: data.topicId};
   }
-
+  console.log("update string");
+  console.log(updateString);
   if(data.topicId) {
     Topics.update(query, updateString, {multi: false}, function (err, resData) {
       if(err) return res.json({success: false, error: err});
-      if(resData) return res.json({success: true, data: resData});
+      Topics.findOne({_id: data.topicId}, function(e,totalpost) {
+        if(totalpost.likes >= 10) {
+            Topics.update({_id: data.topicId}, {type: 'S'}, {multi: false}, function (uerr, uresData) {
+            });
+        }
+        if(resData) return res.json({success: true, data: resData});            
+      });
     });  
   } else {
     res.json({success: false, error: "No topics found"});

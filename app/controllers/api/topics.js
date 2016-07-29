@@ -62,6 +62,14 @@ module.exports = function( app ) {
     modelHelpers.getOnlyTopic(params, res, app);
   });
 
+  app.post('/topics/AdvanceSearch', function(req, res) {
+    var params = req.body;
+    console.log("AdvanceSearch");
+    console.log(params);
+    console.log(JSON.stringify(params));
+    modelHelpers.topicAdvanceSearch(params, res, app);
+  });
+
   app.get('/topics/getExtraData', function(req, res) {
     var params = req.query;
     console.log('getExtraData');
