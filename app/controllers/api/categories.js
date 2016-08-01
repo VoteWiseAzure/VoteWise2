@@ -9,6 +9,7 @@ var helpers = require('../../helpers/controllers');
 var modelHelpers = require('../../helpers/categories');
 var commonHelpers = require('../../helpers/common');
 var multer  = require('multer');
+var Category = require('../../models/categories');
 
 module.exports = function( app ) {
 
@@ -138,5 +139,161 @@ module.exports = function( app ) {
 
       modelHelpers.removeCategory(params.id, res, app);
 
+  });
+
+  app.get('/categories/import', function(req, res) {
+    console.log("** categories import **");
+    var fs = require('fs');
+    var path = require('path');
+    var async = require('async');
+
+    /* 
+    fs.readFile(path.resolve(__dirname+"../../../../JSON_DATA/", 'topics.json'), 'utf8', function (err, data) {
+      if (err) return res.json({success: false, error: err});
+      var obj = JSON.parse(data);
+      var async = require('async');
+
+      var tempArr = [];
+      async.forEachOf(obj, function (resCat, key, parentcallback) {
+
+        if(resCat.parent == "5799efd789f19ca82688dcac"){
+          Category.find({"_id": resCat.id}, {})
+          .lean()
+          .exec(function(err, catData){
+            if(err){
+              console.log("resCat: ", resCat);
+              
+              var category = new Category({
+                title: resCat.description,
+                description: resCat.description,
+                parentIds: [{
+                  pid: '5799efd789f19ca82688dcac',
+                  path: ",5799efd789f19ca82688dcac,",
+                  viewOrder: resCat.viewOrder
+                }],
+                icon_image: null
+              });
+              // Saving adress
+              category.save( function ( err, category ) {
+                if (err) {
+                  //res.status(400);
+                  console.log("err: ",err);
+                  // return res.json( { success: false, error: "Unable to add category" } );
+                  parentcallback();
+                }
+                if(category){
+                  tempArr.push(category);
+                  parentcallback();
+                }
+              });
+              // tempArr.push(resCat);
+              // parentcallback();
+            }
+            else
+              parentcallback();
+          });
+        }
+        else{
+          parentcallback();
+        }
+      }, function (err) {
+          return res.json({success: true, data: tempArr});
+      });
+
+      // return res.json({success: true, data: obj});
+    });
+    */
+
+    var file_path = path.resolve(__dirname+"../../../../JSON_DATA/", 'topics_new.json');
+    var back_file = path.resolve(__dirname+"../../../../JSON_DATA/", 'background_new.json');
+    topic_obj = fs.readFileSync(file_path);
+    back_obj = fs.readFileSync(back_file);
+
+      topic_obj = JSON.parse(topic_obj);
+      back_obj = JSON.parse(back_obj);
+      
+      var getTopicObj = function(backdata){
+        var len = topic_obj.length;
+        for (var i = 0; i < len; i++) {
+          if(backdata.background == topic_obj[i].background){
+            return topic_obj[i];
+          }
+        }
+        return null;
+      };
+
+      var tempArr = [];
+      async.forEachOf(back_obj, function (backdata, key, parentcallback) {
+          if(backdata.background){
+              var tpc = getTopicObj(backdata);
+              console.log("tpc ", tpc);
+              if(tpc){
+                Category.find({"_id": tpc.id}, {parentIds: 1, _id: 1})
+                .lean()
+                .exec(function(err, catdata){
+                  if(catdata && catdata.length > 0){
+                    var parentarr = catdata[0].parentIds;
+                    var parentobj = {};
+                    if(parentarr.length > 0){
+                      var str = parentarr[0].path;
+                      var temp = str.split(",");
+                      
+                      parentobj = {
+                        title: backdata.shortDescription,
+                        description: backdata.description,
+                        parentIds: [{
+                          pid:  catdata[0]._id,
+                          path: parentarr[0].path+catdata[0]._id+",",
+                          viewOrder: 0
+                        }],
+                        icon_image: null
+                      };
+
+                      back_obj[key].parent_obj = parentobj;
+                      // console.log("---------- appliying to key", key);
+                    }
+                  }
+                  parentcallback();
+                });
+              }
+              else{
+                parentcallback()
+              }
+          }
+          else{
+            parentcallback();
+          }
+      }, function (err) {
+        /*
+        async.forEachOf(back_obj, function (o, key, callback){
+            if(o.parent_obj){
+              var category = new Category({
+                title: o.parent_obj.title,
+                description: o.parent_obj.description,
+                parentIds: o.parent_obj.parentIds,
+                icon_image: null
+              });
+              // Saving adress
+              category.save( function ( err, category ) {
+                if (err) {
+                  console.log("************ err while saving ***********: ",key," error: ",err);
+                }
+                if(category){
+                  console.log("---  Saved ---: ",key);
+                }
+                callback();
+              });
+            }
+            else{
+              callback();
+            }
+        }, function(err){
+          return res.json({success: true, data: back_obj})
+        });
+        */
+      });
+
+      // return res.json({success: true, data: obj});
+    
   });
 }
