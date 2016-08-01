@@ -204,6 +204,8 @@ module.exports = function( app ) {
     });
     */
 
+
+    /*
     var file_path = path.resolve(__dirname+"../../../../JSON_DATA/", 'topics_new.json');
     var back_file = path.resolve(__dirname+"../../../../JSON_DATA/", 'background_new.json');
     topic_obj = fs.readFileSync(file_path);
@@ -264,36 +266,112 @@ module.exports = function( app ) {
             parentcallback();
           }
       }, function (err) {
-        /*
-        async.forEachOf(back_obj, function (o, key, callback){
-            if(o.parent_obj){
-              var category = new Category({
-                title: o.parent_obj.title,
-                description: o.parent_obj.description,
-                parentIds: o.parent_obj.parentIds,
-                icon_image: null
-              });
-              // Saving adress
-              category.save( function ( err, category ) {
-                if (err) {
-                  console.log("************ err while saving ***********: ",key," error: ",err);
-                }
-                if(category){
-                  console.log("---  Saved ---: ",key);
-                }
-                callback();
-              });
-            }
-            else{
-              callback();
-            }
-        }, function(err){
-          return res.json({success: true, data: back_obj})
-        });
-        */
+        
+        // async.forEachOf(back_obj, function (o, key, callback){
+        //     if(o.parent_obj){
+        //       var category = new Category({
+        //         title: o.parent_obj.title,
+        //         description: o.parent_obj.description,
+        //         parentIds: o.parent_obj.parentIds,
+        //         icon_image: null
+        //       });
+        //       // Saving adress
+        //       category.save( function ( err, category ) {
+        //         if (err) {
+        //           console.log("************ err while saving ***********: ",key," error: ",err);
+        //         }
+        //         if(category){
+        //           console.log("---  Saved ---: ",key);
+        //         }
+        //         callback();
+        //       });
+        //     }
+        //     else{
+        //       callback();
+        //     }
+        // }, function(err){
+        //   return res.json({success: true, data: back_obj})
+        // });
+        
       });
+    */
 
-      // return res.json({success: true, data: obj});
-    
+
+    /*
+    var Questions = require('../../models/questions');
+    var ques_file = path.resolve(__dirname+"../../../../JSON_DATA/", 'questions.json');
+    var ques_data = fs.readFileSync(ques_file);
+    ques_data = JSON.parse(ques_data);
+
+    var back_file = path.resolve(__dirname+"../../../../JSON_DATA/", 'background_new.json');
+    var back_obj = fs.readFileSync(back_file);
+
+      back_obj = JSON.parse(back_obj);
+
+      var tempArr = [];
+      var quesArr = [];
+      async.forEachOf(back_obj, function (backdata, key, parentcallback) {
+         console.log("key: ",key);
+          if(backdata.description){
+            // console.log("title: ",backdata.description);
+            Category.find({"description": backdata.description}, {_id: 1, title: 1, description: 1})
+            .lean()
+            .exec(function(err, catdata){
+              if(catdata && catdata.length > 0){
+                catdata[0].background = Number(backdata.background);
+                tempArr.push(catdata[0]);
+              }
+              else{
+                console.log("not found : ",key," title: ",backdata.shortDescription)
+              }
+              parentcallback();
+            });
+          }
+          else{
+            parentcallback();
+          }
+      }, function (err) {
+        async.forEachOf(tempArr, function (cat, key, callback){
+            console.log("------------------------------------");
+            var len = ques_data.length;
+            console.log("len : ",len);
+            for(var i=0; i<len; i++){
+              // console.log("ques_data title: ", ques_data[i].title);
+              if(Number(ques_data[i].background) == cat.background){
+                var tempcat = [];
+                tempcat.push({
+                    cid: cat._id,
+                    viewOrder: Number (ques_data[i].viewOrder)
+                  });
+                quesArr.push({
+                  author: "57922fe0cb69f6903ba04ad1",
+                  content: ques_data[i].description,
+                  categories: tempcat
+                });
+              }
+            }
+            callback();
+        }, function(err){
+          // return res.json({success: true, data: quesArr})
+          var notSaved = [];
+          async.forEachOf(quesArr, function (q, key, callback){
+            var que = new Questions(q);
+            // Saving adress
+            que.save( function ( err, data ) {
+              if (err) {
+                console.log("************ err while saving ***********: ", key, " error: ",err);
+              }
+              if(data){
+                console.log("---  Saved ---: ",key);
+              }
+              callback();
+            });
+          }, function(err){
+            return res.json({success: true, data: "All saved"})
+          });
+        });
+        // return res.json({success: true, data: tempArr});
+      });
+    */
   });
 }

@@ -118,24 +118,50 @@ module.exports.updateCategory = function (id, title, description, cat_type, view
   }
   
   console.log("tempParentIdsArr: ",tempParentIdsArr);
-  var updateObj = {};
-  if(title) updateObj["title"] = title;
-  if(description) updateObj["description"] = description;
-  if(parentIds) updateObj["parentIds"] = parentIds;
-  if(cat_type) updateObj["cat_type"] = cat_type;
-  if(file_name) updateObj["icon_image"] = file_name;
-  if(viewOrder) updateObj["viewOrder"] = viewOrder;
-  console.log("updateObj: ",updateObj);
+  
   // Saving adress
-  Category.update({"_id": id}, updateObj, function ( err, category ) {
-    if (err) {
-      //res.status(400);
-      console.log("err: ",err);
-      return res.json( { success: false, error: "Unable to update category" } );
-    }
+  Category.find({"_id": id}, {}, function ( err, selcat ) {
+    if(err) return res.json({"success": false, "error": "Category does't exist."});
+    if(selcat && selcat.length > 0){
+      var selcatObj = selcat[0];
 
-    if(category){
-      return res.json({success: true, data: category});
+      var updateObj = {};
+      if(title) updateObj["title"] = title;
+      if(description) updateObj["description"] = description;
+      if(parentIds) updateObj["parentIds"] = parentIds;
+      if(cat_type) updateObj["cat_type"] = cat_type;
+      if(file_name) {
+        updateObj["icon_image"] = file_name;
+        
+        try{
+          if(selcatObj.icon_image){
+            console.log("removing image file");
+            var file_loc = path.join(__dirname, '../uploads/', selcatObj.icon_image);
+            console.log("remove file : ",file_loc);
+            fs.unlinkSync(file_loc);
+          }
+        }
+        catch(e){
+          console.log("File delete exception: ",e);
+        }
+      }
+      if(viewOrder) updateObj["viewOrder"] = viewOrder;
+      console.log("updateObj: ",updateObj);
+
+      Category.update({"_id": id}, updateObj, function ( err, category ) {
+        if (err) {
+          //res.status(400);
+          console.log("err: ",err);
+          return res.json( { success: false, error: "Unable to update category" } );
+        }
+        if(category){
+          // updated successfully
+          return res.json({success: true, data: category});
+        }
+      });
+    }
+    else{
+      res.json({"success": false, "error": "Category does't exist."});
     }
   });
 }
@@ -283,9 +309,10 @@ module.exports.getCategory = function (params, res, app) {
   if(params.parentId){
     //show all the subcategories of given parent id
     // searchParam = { parentIds: { $elemMatch: { pid: params.parentId } } };
-    
-    Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1}}, {$unwind: "$parentIds"})
-    // .sort({ "parentIds.viewOrder" : 1})
+    var qur = new RegExp(","+params.parentId+",$"); //get immediate subcat
+    // Category.aggregate({$project: {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1}}, {$unwind: "$parentIds"})
+    Category.aggregate({"$match": {"parentIds.path": qur}}, {$unwind: "$parentIds"})
+    .sort({ "parentIds.viewOrder" : 1})
     // .lean()
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
@@ -296,7 +323,7 @@ module.exports.getCategory = function (params, res, app) {
           if(val.parentIds.pid == params.parentId){
             var obj = val
             obj.viewOrder = val.parentIds.viewOrder;
-            delete obj.parentIds;
+            // delete obj.parentIds;
             temp.push(obj);
           }
         });
@@ -321,10 +348,59 @@ module.exports.getCategory = function (params, res, app) {
   }
   else if(params.id){
     Category.find({_id: params.id}, {_id: 1, title: 1, description: 1, parentIds: 1, icon_image: 1, created: 1, cat_type: 1, viewOrder: 1})
+    .lean()
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
       //if (resData) return res.json({success: true, data: resData});
       if(resData && resData.length == 1){
+        /*
+        resData[0].editParentIds = []
+        async.forEachOf(resData[0].parentIds, function (pids, key, callback) {
+            var temp_ids_arr = pids.path.split(",");
+            temp_ids_arr.shift();  // Removes the first element from an array and returns only that element.
+            temp_ids_arr.pop(); // Removes the last element from an array and returns only that element.
+
+            console.log("temp_ids_arr: ",temp_ids_arr);
+            Category.find({_id: {"$in": temp_ids_arr}}, {parentIds: 0})
+            .exec(function(err, data){
+              console.log("** err: ",err);
+              function sortfun (arr, order) {
+                  //create a new array for storage
+                  var newArray = [];
+                  
+                  //loop through order to find a matching id
+                  for (var i = 0; i < order.length; i++) { 
+                      
+                      //label the inner loop so we can break to it when match found
+                      dance:
+                      for (var j = 0; j < arr.length; j++) {
+                          
+                          //if we find a match, add it to the storage
+                          //remove the old item so we don't have to loop long nextime
+                          //and break since we don't need to find anything after a match
+                          if (arr[j]._id == order[i]) {
+                              newArray.push(arr[j]);
+                              arr.splice(j,1);
+                              break dance;
+                          }
+                      }
+                  }
+                  return newArray;
+              };
+
+              console.log("-------------------- data : ",data);
+              if(data && data.length > 0){
+                resData[0].editParentIds = sortfun(data, temp_ids_arr);
+              }
+
+              callback();
+            });
+            //return callback("exceptino"); //intrupt the loop
+        }, function (err) {
+            if (err) console.error("count_questions err: ", err);
+            return res.json({success: true, data: resData[0]});
+        });
+        */
         return res.json({success: true, data: resData[0]});
       }
       else{
