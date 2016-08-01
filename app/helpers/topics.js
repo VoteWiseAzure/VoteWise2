@@ -10,7 +10,7 @@ var bcrypt = require('bcrypt');
 
 var mailer = require('../middleware/mailer');
 var jwt = require('jsonwebtoken');
-
+var async = require('async');
 var helpers = require('./controllers');
 var mongoose = require('mongoose');
 var ObjectID = mongoose.Types.ObjectId;
@@ -282,15 +282,27 @@ module.exports.latestTopic = function (params, res, app) {
 
 module.exports.topicList = function (params, res, app) {  
   var query = ''
+  console.log("TOOOOOOOOOOpic List called");
    if(params.subcatId) {
     if(params.maincatId){
       query = "parentcat : "+ params.maincatId +", subcategories : "+ params.subcatId;
     } else {
       query = "subcategories : "+ params.subcatId;
     }
+
+    function checkKey(key, arr) {
+
+      if(arr[key]!="") {
+        var k = key + 1;
+        checkKey(k, arr);
+      } else {
+        return key;
+      }
+    }
     
     var returnObj = {};
     Topics.find({ subcategories: params.subcatId, parent: null })
+    .sort({"createdOn": -1})
     .exec(function(err,restop) {
      
       if (err) {
@@ -305,36 +317,64 @@ module.exports.topicList = function (params, res, app) {
           var len = restop.length;
           var j=0;
           var finalData = Array();
-          restop.forEach(function(val, key){
+          var skipKey = [];
+          var AddKey = [];
+          async.forEachOf(restop, function(val, key, callback){
               val = val.toObject();
               Topics.count({"parent": val._id}, function(e,totalReply) {
                 val.totalReply = totalReply;
-                if(totalReply > 0) {
+                //if(totalReply > 0) {
                   Topics.findOne({ parent: val._id })
                   .sort({"createdOn": -1})
                   .exec(function(err,lastTopic) {
                     val.lastTopic = lastTopic;
-                    finalData.push(val);
-                    j++;
-                    if(len == j) {
-                      return res.json({success: true, data: finalData});    
-                    }
                     
+                    if(val.postSticky=="Y") {
+                      //console.log(val.stickyOrder);
+                      //console.log(val);
+                      if(val.postOrder > 0) {
+                        val.orderPost = val.postOrder - 1;  
+                      } else {
+                        val.orderPost = 0;
+                      }
+                      console.log(val.orderPost);
+                      skipKey[val.orderPost] = val;
+                      
+                    } else {
+                      val.orderPost = key;  
+                      AddKey.push(val);
+                    }
+                    //console.log("Vallllllll");
+                    //console.log(val);
+                    
+                    callback();
                   });
 
-                } else {
+               /* } else {
                   ////console.log("Second FInal ");
                   ////console.log(val);
-
-                   finalData.push(val);
-                  j++;
-                    if(len == j) {
-                      return res.json({success: true, data: finalData});  
+                  if(val.postSticky=="Y") {
+                      //console.log(val.stickyOrder);
+                      console.log(val.postOrder);
+                      finalData.splice(val.postOrder -1, 0, val);
+                    } else {
+                      val.orderPost = key;  
+                      finalData.push(val);
                     }
-                }
+                    callback();
+                }*/
+                
                 
               });
-            });
+            }, function(err) {
+                console.log("This is called");
+                if(err) { return res.json( { success: false, error: "There are no topics" } ); }
+                console.log(skipKey);
+                skipKey.filter(function(e){ console.log("Filter :",e); return e});
+                console.log(skipKey);
+                finalData = skipKey.concat(AddKey);
+                return res.json({success: true, data: finalData}); 
+              });
            // return res.json({success: true, data: restop});
         } else {
           ////console.log("There are no topics");
@@ -690,6 +730,20 @@ module.exports.updateTopic = function (data, res, app) {
 
   if(data.removeSticky) {
     updateString = {'sticky': 'N', 'stickyOrder': 0};
+  }
+
+
+  if(data.poststicky) {
+    if(data.poststickyOrder && data.poststickyOrder > 0) {
+      updateString = {$inc : {'postOrder' : data.poststickyOrder}, 'postSticky': 'Y'};  
+    } else {
+      updateString = {$inc : {'postOrder' : 1}, 'postSticky': 'Y'};  
+    }
+    
+  }
+
+  if(data.removepostSticky) {
+    updateString = {'postSticky': 'N', 'postOrder': 0};
   }
 
   if(data.resolved) {
