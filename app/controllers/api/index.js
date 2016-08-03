@@ -16,6 +16,8 @@ var Questions = require('./questions');
 var Answers = require('./answers');
 
 var Topics = require('./topics');
+var Essay = require('./essay');
+var Gallery = require('./gallery');
 
 
 module.exports = ( app ) => {
@@ -34,4 +36,6 @@ module.exports = ( app ) => {
     Questions (app);
     Answers(app);
     Topics(app);
+    Essay(app);
+    Gallery(app);
 };
