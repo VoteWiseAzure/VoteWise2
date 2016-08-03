@@ -95,7 +95,21 @@ module.exports = function( app ) {
           return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
         }
 
-        if(params.parentIds){
+        if(params.parentIds && params.id){
+          modelHelpers.isValidParentIds(allIds, function(isValid) {
+            if(isValid){
+              //for updateing existing category
+              if(arrParentIds.length <= 0){
+                arrParentIds = null;
+              }
+              modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
+            }
+            else{
+              return res.json({success: false, error: "Invalid parentIds"});
+            }
+          });
+        }
+        else if(params.parentIds){
           modelHelpers.isValidParentIds(allIds, function(isValid) {
             if(isValid){
               // Stores category in db
@@ -123,6 +137,45 @@ module.exports = function( app ) {
     });
   });
 
+  app.post('/categories/update-parent', function(req, res) {
+    
+    var params = req.body;
+
+    var verifydRes = commonHelpers.verfiyRequiredFields(['id'], params, res); //verify require fields //'parentIds', viewOrders
+    if(!verifydRes.success){
+      return res.json(verifydRes);
+    }
+
+    // var arrParentIds = params.parentIds ? params.parentIds.split(",") : [];
+    var arrParentIds = params.parentIds ? params.parentIds.split(";") : [];
+    var arrViewOrders = params.viewOrders ? params.viewOrders.split(",") : [];
+
+    var allIds = [];
+    Array.prototype.unique = function() {
+        var a = this.concat();
+        for(var i=0; i<a.length; ++i) {
+            for(var j=i+1; j<a.length; ++j) {
+                if(a[i] === a[j])
+                    a.splice(j--, 1);
+            }
+        }
+
+        return a;
+    };
+    arrParentIds.forEach(function(val, key){
+      allIds = allIds.concat(val.split(",")).unique();
+    });
+    if(arrParentIds.length != arrViewOrders.length){
+      return res.json({success: false, error: "Parent ids length is not matching with the orders list."});
+    }
+    if(arrParentIds.length <= 0){
+      arrParentIds = null;
+    }
+
+    modelHelpers.updateParentCategory(params.id, arrParentIds, arrViewOrders, params.old_path_ids, params.viewOrder, res, app);
+
+  });
+
   app.get('/categories/list', function(req, res) {
     var params = req.query;
     modelHelpers.getCategory(params, res, app);
@@ -137,7 +190,7 @@ module.exports = function( app ) {
         return res.json(verifydRes);
       }
 
-      modelHelpers.removeCategory(params.id, res, app);
+      modelHelpers.removeCategory(params.id, params.old_path_ids, res, app);
 
   });
 

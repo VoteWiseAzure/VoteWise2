@@ -19,15 +19,15 @@ module.exports.verfiyRequiredFields = function ( params, reqParams) {
 
 module.exports.getUserFromToken = function ( token, app, cb) {
   jwt.verify(token, app.get('superSecret'), function(err, decoded){
-    if(err) cb({success: false, data: err});
+    if(err) cb({"success": false, "error": "SESSION_EXPIRED"});
     if(decoded){
       try{
         // console.log("in try: ", decoded);
-        cb ({success: true, data: decoded["_doc"]});
+        cb ({"success": true, "data": decoded["_doc"]});
       }
       catch(e){
         console.log("excetption: ", decoded);
-        cb ({success: false, data: e});
+        cb ({"success": false, "error": "SESSION_EXPIRED"});
       }
     }
   });

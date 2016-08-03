@@ -166,6 +166,248 @@ module.exports.updateCategory = function (id, title, description, cat_type, view
   });
 }
 
+
+module.exports.updateParentCategory = function (id, parentIds, arrViewOrders, old_path_ids, viewOrder, res, app) {
+  // Making new adress
+  var tempParentIdsArr = [];
+  if(parentIds){
+    var len = parentIds.length;
+    for(var i=0; i<len; i++){
+      var arr = parentIds[i].split(",");
+      tempParentIdsArr.push({
+        pid: arr[arr.length - 1],
+        path: ","+parentIds[i]+",",
+        viewOrder: arrViewOrders[i]
+      });
+    }
+  }
+  //for validation
+  if(tempParentIdsArr.length > 1){
+    return res.json({success: false, error: "Can not update on multiple parent paths."});
+  }
+
+  console.log("tempParentIdsArr: ",tempParentIdsArr);
+  
+  // Saving adress
+  Category.find({"_id": id}, {})
+  .lean()
+  .exec(function ( err, selcat ) {
+    if(err) return res.json({"success": false, "error": "Category does't exist."});
+    if(selcat && selcat.length > 0){
+      var selcatObj = selcat[0];
+
+      var updateObj = {};
+      
+      // if(parentIds) updateObj["parentIds"] = parentIds;
+      // if(viewOrder) updateObj["viewOrder"] = viewOrder;
+      
+      var old_parent_obj = null;
+      var search_path = null;
+      var update_path = null;
+      if(parentIds){
+        var len = selcatObj.parentIds.length;
+        console.log("len : ",len);
+        if(len <= 0){
+          // console.log("--------- shifting root category to child of a node-------");
+          search_path = ","+selcatObj._id+",";
+          // update_path = 
+        }
+        else if(len > 0 && old_path_ids){
+          for(var i=0; i<len; i++){
+            // console.log("i= ",i+" _id: ",selcatObj.parentIds[i]._id);
+            if(selcatObj.parentIds[i]._id == old_path_ids){
+              // console.log("matched ", selcatObj.parentIds[i]._id, "==", old_path_ids);
+              old_parent_obj = selcatObj.parentIds[i];
+              search_path = selcatObj.parentIds[i].path+selcatObj._id+",";
+              break;
+            }
+          }
+        }
+      }
+
+      console.log("old_path_id: ",old_path_ids);
+      console.log("search_path: ",search_path);
+
+      var updateChildCatArr = [];
+      var qur = new RegExp("^"+search_path);
+      console.log("RegExp Quer: ",qur);
+
+      var preantIdslen = selcatObj.parentIds.length;
+      // console.log("selcatObj: ",selcatObj);
+      console.log("preantIdslen: ",preantIdslen);
+      if(preantIdslen <= 0 && tempParentIdsArr.length > 0){
+        //it was a root
+        console.log("----- udpating root category ------");
+        var newUpdatedPath = tempParentIdsArr[0].path+selcatObj._id+",";
+        console.log("newUpdatedPath : ",newUpdatedPath);
+        /*
+        Category.update({"_id": id}, {"$addToSet": {"parentIds": { "$each": tempParentIdsArr}}})
+        .exec(function ( err, category ){
+          if(err) return res.json({"success": false, "error": "Update failed."});
+          if(category){
+            Category.update({"parentIds.path": qur}, {"$set": {"parentIds.$.path": newUpdatedPath}})
+            .exec(function ( err, category ){
+              if(err) return res.json({"success": false, "error": "Category updated, but child noeds are not updated."});
+              if(category)
+                return res.json({"success": true, "data": "Updated successfully."});
+            });
+          }
+        });
+        */
+        Category.update({"_id": id}, {"$addToSet": {"parentIds": { "$each": tempParentIdsArr}}})
+        .exec(function ( err, data ){
+          if(err) return res.json({"success": false, "error": "Update failed."});
+          if(data){
+            Category.find({"parentIds.path": qur})
+            .lean()
+            .exec(function ( err, category ){
+              if(err) return res.json({"success": false, "error": "Category updated, but child noeds are not updated."});
+              if(category){
+                async.forEachOf(category, function (cat, key, callback) {
+                  cat.parentIds.forEach(function(val, i){
+                    var tempParentObj = category[key].parentIds[i];
+                    if(qur.test(tempParentObj.path)){
+                      tempParentObj.path = tempParentObj.path.replace(qur, newUpdatedPath);
+                       Category.update({"parentIds._id": tempParentObj._id}, {"$set": {"parentIds.$.path": tempParentObj.path}})
+                      .exec(function ( err, category ){
+                        if(err) console.log("error: ",err);
+                        if(category){
+                          console.log("--saved--");
+                        } 
+                      });
+                    }
+                  });
+                  callback();
+                }, function (err) {
+                  return res.json({"success": true, "data": "Updated successfully."});
+                });
+              }//if data
+            });
+          }
+        });
+      }// if updated category was a root //completed
+      else if(preantIdslen > 0 && tempParentIdsArr.length > 0){
+        console.log("----- udpating sub category ------");
+        var newUpdatedPath = tempParentIdsArr[0].path+selcatObj._id+",";
+        console.log("newUpdatedPath : ",newUpdatedPath);
+
+        if(!old_path_ids){
+          //old_path_ids is required
+          return res.json({"success": false, "error": "'old_path_ids' parameter is required for this category."});
+        }
+
+        Category.update({"parentIds._id": old_path_ids}, 
+          {
+            "$set": {
+              "parentIds.$.pid": tempParentIdsArr[0].pid,
+              "parentIds.$.path": tempParentIdsArr[0].path,
+              "parentIds.$.viewOrder": tempParentIdsArr[0].viewOrder,
+            }
+          }
+        )
+        .exec(function (err, data ){
+          if(err) return res.json({"success": false, "error":"Update failed."});
+          if(data){
+            Category.find({"parentIds.path": qur})
+            .lean()
+            .exec(function ( err, category ){
+              if(err) return res.json({"success": false, "error": "Category updated, but child noeds are not updated."});
+              if(category){
+                async.forEachOf(category, function (cat, key, callback) {
+                  cat.parentIds.forEach(function(val, i){
+                    var tempParentObj = category[key].parentIds[i];
+                    if(qur.test(tempParentObj.path)){
+                      tempParentObj.path = tempParentObj.path.replace(qur, newUpdatedPath);
+                       Category.update({"parentIds._id": tempParentObj._id}, {"$set": {"parentIds.$.path": tempParentObj.path}})
+                      .exec(function ( err, category ){
+                        if(err) console.log("error: ",err);
+                        if(category){
+                          console.log("--saved--");
+                        }
+                      });
+                    }
+                  });
+                  callback();
+                }, function (err) {
+                  return res.json({"success": true, "data": "Updated successfully."});
+                });
+              }//if category
+            });
+          }//if data
+        });
+      }//if updatting sub categoy //completed
+      else if(tempParentIdsArr.length == 0){
+        console.log("----- make this category as root category -----");
+        viewOrder = viewOrder ? viewOrder : 0;
+        var qurArr = [];
+        selcatObj.parentIds.forEach(function(val, key){
+          qurArr.push({
+            "search_path": new RegExp("^"+val.path+selcatObj._id+","),
+            "new_path": ","+selcatObj._id+","
+            // "pid": no need to update pid, it will be at last of the path so no problem here
+          });
+        });
+
+        console.log("qurArr: ",qurArr);
+
+        Category.update(
+          {"_id": id}, 
+          { 
+            "viewOrder": viewOrder,
+            "parentIds": []
+          }
+        )
+        .exec(function (err, data){
+          if(err) return res.json({"success": false, "error": err});
+          if(data){
+            // var tempUpdateCatArr = [];
+            async.forEachOf(qurArr, function (qobj, key, callback) {
+              Category.find(
+                {"parentIds.path": qobj.search_path}, 
+                {"parentIds": 1, "title": 1}
+              )
+              .exec(function (err, data) {
+                if(err) console.log("select error: ",err);
+                if (data){
+                  data.forEach(function(cat, i){
+                    cat.parentIds.forEach(function(parentObj, j){
+                      if(qobj.search_path.test(parentObj.path)){
+                        parentObj.path = parentObj.path.replace(qobj.search_path, qobj.new_path);
+                        data[i].parentIds[j] = parentObj;
+                        Category.update({"parentIds._id": parentObj._id}, {"$set": {"parentIds.$.path": parentObj.path}})
+                        .exec(function ( err, cupdate ){
+                          if(err) console.log("error: ", err);
+                          if(cupdate){
+                            console.log("-- saved --");
+                          } 
+                        });
+                      }
+                    });
+                  });
+                  // tempUpdateCatArr = tempUpdateCatArr.concat(data);
+                }//if data
+
+                callback();
+              });
+            },
+            function(err) {
+              console.log("completed");
+              return res.json({"success": true, "data": "Updated successfully."});
+            });
+          }
+        });
+      }
+      else{
+        return res.json({"success": false, "error": "Unable to execute API."});
+      }
+    }
+    else{
+      res.json({"success": false, "error": "Category does't exist."});
+    }
+  });
+}
+
+
 module.exports.getCategory = function (params, res, app) {
   // list all categories
   /*
@@ -174,7 +416,6 @@ module.exports.getCategory = function (params, res, app) {
     if (user) console.log("delte all");
   });
   */
-
   var count_questions_old = function (catList) {
     var resArr = [];
     async.forEachOf(catList, function (resCat, key, parentcallback) {
@@ -241,7 +482,6 @@ module.exports.getCategory = function (params, res, app) {
       else
         return res.json({success: true, data: resArr.sort(helpers.keySortByDate("created", 1))});
     });
-    
   };
 
   var count_questions = function (catList) {
@@ -618,26 +858,28 @@ module.exports.getCategoryNew_for_testing = function (params, res, app) {
   }
 }
 
-module.exports.removeCategory = function ( id, res, app ) {
+module.exports.removeCategory = function ( id, old_path_ids, res, app ) {
 
   console.log("removeCategory 1:", id);
 
   Category.find({"_id": id}, {_id: 1, title: 1, parentIds: 1})
   .exec(function ( err, resData ) {
     if (err) return res.json({success: false, error: err});
-    if (resData) {
-      Category.find({_id: id}, {"icon_image": 1}).lean()
+    if (resData && resData.length > 0) {
+      resData = resData[0];
+      Category.find({_id: id}, {"parentIds": 1})
+      .lean()
       .exec(function ( err, catData ) {
         if (err) return res.json({success: false, error: err});
         if (catData){
           console.log("*** catData: ", catData);
+          /*
           if(catData.length > 0 && catData[0].icon_image){
             console.log("removing image file");
             var file_loc = path.join(__dirname, '../uploads/', catData[0].icon_image);
             console.log("file_loc: ",file_loc);
             fs.unlinkSync(file_loc);
           }
-
           Category.remove({"_id": id}, function ( err, delData ) {
             if (err) return res.json({success: false, error: err});
             if (delData) res.json({success: true, data: delData});
@@ -659,8 +901,61 @@ module.exports.removeCategory = function ( id, res, app ) {
               }
             });
           });
+          */
+          var len = resData.parentIds.length;
+          var search_path = null;
+          var new_path = null;
+          for(var i=0; i<len; i++){
+            var tempParentObj = resData.parentIds[i];
+            if(tempParentObj._id == old_path_ids){
+              search_path = tempParentObj.path+resData._id+",";
+              // var tempParentIdsArr = resData.parentIds[i].path.split(",");
+              // tempParentIdsArr.shift();//remove first "" char from array
+              // tempParentIdsArr.pop();//remove last "" char from array
+              // var imediateParentId = tempParentIdsArr.pop();
+              new_path = tempParentObj.path;
+              break;
+            }
+          }
+
+          if(search_path){
+            var qur = new RegExp("^"+search_path);
+            console.log("qur: ", qur);
+            console.log("new_path: ", new_path);
+            Category.find(
+              {"parentIds.path": qur},
+              {title: 1, parentIds: 1}
+            )
+            .lean()
+            .exec(function (err, catData) {
+              if(err) return res.json({success: false, error: "Unable to remove."});
+              if(catData){
+                var tempUpdateCatArr = [];
+                console.log("found  Category : ", catData.length);
+                async.forEachOf(catData, function (cat, key, callback) {
+                  cat.parentIds.forEach(function(val, i){
+                    if(qur.test(val.path)){
+                      catData[key].parentIds[i].path = val.path.replace(qur, new_path);
+                    }
+                  });
+                  // tempUpdateCatArr = tempUpdateCatArr.concat(data);
+                  callback();
+                }, 
+                function (err) {
+                  // body...
+                  return res.json({success: true, data: catData});
+                });
+              }
+            });
+          }
+          else{
+            return res.json({success: false, error: "Unable to remove."});
+          }
         }
       });
-    };//resData
+    }//resData
+    else{
+      return res.json({success: false, error: "Category doesn't exist."});
+    }
   });//find
 }

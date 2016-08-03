@@ -55,7 +55,7 @@ module.exports = function( app ) {
         });
       }
       else{
-        return res.json({success: false, data: tokenData.data});
+        return res.json({success: false, error: tokenData.error});
       }
     });
 
