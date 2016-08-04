@@ -3,6 +3,7 @@ var User = require('../models/user');
 var Geo = require('../models/geoDivPa');
 var Questions = require('../models/questions');
 var Category = require('../models/categories');
+var Answers = require('../models/answers');
 
 var saltRounds = 10;
 var bcrypt = require('bcrypt');
@@ -235,10 +236,18 @@ module.exports.getQuestionsTaggedTo = function (user_id, res, app) {
 module.exports.removeQuestion = function ( id, res, app ) {
 
   console.log("removeQuestion: ", id);
-
-  Questions.remove({_id: id}, function ( err, delData ) {
+  Answers.count({"question": id})
+  .exec(function(err, countData){
+    if(err) return res.json({"success": false, "error": err});
+    if(countData > 0){
+      return res.json({"success": false, "error": "Can't remove question, the question has answers."});
+    }
+    else{
+      Questions.remove({_id: id}, function ( err, delData ) {
         if (err) res.json({success: false, error: err});
         if (delData) res.json({success: true, data: delData});
+      });
+    }
   });
 }
 
