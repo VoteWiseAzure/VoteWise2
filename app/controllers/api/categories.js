@@ -102,7 +102,7 @@ module.exports = function( app ) {
               if(arrParentIds.length <= 0){
                 arrParentIds = null;
               }
-              modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
+              modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, params.parent_path_id, params.parent_path_order, res, app);
             }
             else{
               return res.json({success: false, error: "Invalid parentIds"});
@@ -127,7 +127,8 @@ module.exports = function( app ) {
             if(arrParentIds.length <= 0){
               arrParentIds = null;
             }
-            modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);
+
+            modelHelpers.updateCategory(params.id, params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, params.parent_path_id, params.parent_path_order, res, app);
           }
           else
             modelHelpers.storeCategory(params.title, params.description, params.cat_type, params.viewOrder, arrParentIds, arrViewOrders, file_name, res, app);

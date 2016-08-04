@@ -104,7 +104,7 @@ module.exports.storeCategory = function (title, description, cat_type, viewOrder
 
 }//store category
 
-module.exports.updateCategory = function (id, title, description, cat_type, viewOrder, parentIds, arrViewOrders, file_name, res, app) {
+module.exports.updateCategory = function (id, title, description, cat_type, viewOrder, parentIds, arrViewOrders, file_name, parent_path_id, parent_path_order, res, app) {
   // Making new adress
   var tempParentIdsArr = [];
   if(parentIds){
@@ -126,6 +126,7 @@ module.exports.updateCategory = function (id, title, description, cat_type, view
       var selcatObj = selcat[0];
 
       var updateObj = {};
+      var queryObj = {"_id": id};
       if(title) updateObj["title"] = title;
       if(description) updateObj["description"] = description;
       if(parentIds) updateObj["parentIds"] = parentIds;
@@ -146,9 +147,22 @@ module.exports.updateCategory = function (id, title, description, cat_type, view
         }
       }
       if(viewOrder) updateObj["viewOrder"] = viewOrder;
+
+      if(parent_path_id){
+        if(!parent_path_order){
+          return res.json({"success": false, "error": "'parent_path_order' is required along with 'parent_path_id'."});
+        }
+        
+        queryObj["parentIds._id"]  = parent_path_id;
+
+        updateObj["$set"] = {
+          "parentIds.$.viewOrder": parent_path_order,
+        };
+      }
+      
       console.log("updateObj: ",updateObj);
 
-      Category.update({"_id": id}, updateObj, function ( err, category ) {
+      Category.update(queryObj, updateObj, function ( err, category ) {
         if (err) {
           //res.status(400);
           console.log("err: ",err);
