@@ -3,6 +3,7 @@ var User = require('../models/user');
 var Advocate = require('../models/advocate');
 var Essay = require('../models/essay');
 var Category = require('../models/categories');
+var Comments = require("../models/essayComments");
 
 var saltRounds = 10;
 var bcrypt = require('bcrypt');
@@ -18,42 +19,54 @@ module.exports.storeEssay = function (data, res, app) {
   // Making new adress
   ////console.log("Store called");
   ////console.log(data);
-  var essay = new Essay();
+    
+    var essay = new Essay();
 
-  essay.title = data.title;
-  essay.description = data.description;
-  essay.parentcat = data.parentcat;
-  ////console.log("Type OF ");
-  ////console.log(typeof data.subcategories);
-  if(data.subcategories) {
-      if (typeof data.subcategories === 'string') {
-        var subcat = data.subcategories;
-        var sub = subcat.split(",");
-        essay.subcategories = sub;
-      } else {
-        essay.subcategories = data.subcategories;  
-      }  
+    essay.title = data.title;
+    essay.description = data.description;
+    essay.parentcat = data.parentcat;
+    ////console.log("Type OF ");
+    ////console.log(typeof data.subcategories);
+    if(data.subcategories) {
+        if (typeof data.subcategories === 'string') {
+          var subcat = data.subcategories;
+          var sub = subcat.split(",");
+          essay.subcategories = sub;
+        } else {
+          essay.subcategories = data.subcategories;  
+        }  
+    }
+    
+    
+    essay.createdBy = {
+      id: data.createdById,
+      name: data.createdByName,
+      utype: data.createdByType,
+    };
+
+    essay.createdOn = new Date();
+    if(data.restrictedTo) {
+      essay.restrictedTo = data.restrictedTo;  
+    }
+    
+    essay.location = data.location;
+
+    essay.mediaType = data.mediaType;
+
+  if(data.mediaType=="Stills") {
+    console.log("Media type is not Text");
+    
+    essay.mediaFile = data.filename;
+  } else {
+    essay.mediaFile = data.mediaFile;
   }
-  
-  
-  essay.createdBy = {
-    id: data.createdById,
-    name: data.createdByName,
-    utype: data.createdByType,
-  };
-
-  essay.createdOn = new Date();
-  if(data.restrictedTo) {
-    essay.restrictedTo = data.restrictedTo;  
-  }
-  
-  essay.location = data.location;
-
-  essay.mediaType = data.mediaType;
-  
+    
+    console.log(data);
   ////console.log(topic);
   // Saving adress
   essay.save( function ( err, fessay ) {
+    console.log(err);
+    console.log(fessay);
     if (err) {
       //res.status(400);
       ////console.log("err: ",err);
@@ -66,6 +79,8 @@ module.exports.storeEssay = function (data, res, app) {
       return res.json({success: true, data: fessay});
     }
   });
+  
+  
   
 }
 
@@ -104,8 +119,9 @@ module.exports.latestEssay = function (params, res, app) {
           returnObj.title = restop.title;
           returnObj.createdby = restop.createdBy;
           returnObj.createdOn = restop.createdOn;
-          returnObj.parent = restop.parent;
-          returnObj.type = restop.type;
+          returnObj.parentcat = restop.parentcat;
+          returnObj.subcategories = restop.subcategories;
+          returnObj.mediaType = restop.mediaType;
            
               Essay.count({"subcategories": params.subcatId}, function(e,totalpost) {
                 ////console.log("totalpost: "+totalpost);
@@ -211,6 +227,32 @@ module.exports.essayList = function (params, res, app) {
   }
     
   
+}
+
+
+
+module.exports.getEssay = function (params, res, app) {  
+  console.log("GetEssay Called");
+  console.log(params);
+  if(params.essayId){
+    Essay.findOne({"_id": params.essayId})
+    .exec(function(err,restop) {
+      if (err) {
+        res.status(400);
+        ////console.log("err: ",err);
+        return res.json( { success: false, error: "Unable to get Essay" } );
+      }
+      console.log("======================");
+      console.log(restop);
+      if(restop){
+       return res.json({success: true, data: restop});
+       
+        
+      }
+    });
+  } else {
+    return res.json( { success: false, error: "There are no Essay" } );
+  }
 }
 
 /*
@@ -941,3 +983,13 @@ module.exports.removeTopic = function ( id, res, app ) {
   });//find
 }
 */
+
+
+module.exports.removeAllEssay = function (res, app ) {
+
+  ////console.log("removeTopic 1:", id);
+  Essay.remove({}, function ( err, delData ) {
+            if (err) return res.json({success: false, error: err});
+            if (delData) res.json({success: true, data: delData});
+          });
+}

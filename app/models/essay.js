@@ -22,21 +22,16 @@ var essaySchema = new Schema({
         vote: Number,
         user: { id: Schema.Types.ObjectId, name: String, utype: String  }
     }], 
-    likes: [{
-        vote: Number,
-        user: { id: Schema.Types.ObjectId, name: String, utype: String  }
-    }],
-    dislikes: [{
-        vote: Number,
-        user: { id: Schema.Types.ObjectId, name: String, utype: String  }
-    }],
-    spam: [{
-        vote: Number,
-        user: { id: Schema.Types.ObjectId, name: String, utype: String  }
-    }],
+    totalLikes: {type: Number, default: 0},
+    totalDislike: {type: Number, default: 0},
+    totalSpam: {type: Number, default: 0},
+    likes: [],
+    dislikes: [],
+    spam: [],
     postSticky: { type: String, default: 'N' },
     postOrder: { type: Number, default: 0 },
     mediaType: { type: String , default: 'Text' },
+    mediaFile: { type: String },
     restrictedTo: { type: String }
 });
 
@@ -47,3 +42,26 @@ essaySchema.index({
 
 
 module.exports = mongoose.model('Essay', essaySchema);
+
+/*
+var essayCommentsSchema = new Schema({
+    essayId: {type: Schema.Types.ObjectId, required :true},
+    comments: {type: String, required :true},
+    createdBy: { id: Schema.Types.ObjectId, name: String, utype: String  },
+    createdOn: { type: Date, default: Date.now },
+    totalLikes: {type: Number, default: 0},
+    totalDislike: {type: Number, default: 0},
+    totalSpam: {type: Number, default: 0},
+    likes: [],
+    dislikes: [],
+    spam: [],
+    parent: { type: Schema.Types.ObjectId, null: true },
+});
+
+essayCommentsSchema.index({
+    comments: 'text'
+});
+
+
+module.exports = mongoose.model('EssayComments', essayCommentsSchema);
+*/

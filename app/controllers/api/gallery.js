@@ -20,25 +20,22 @@ module.exports = function (app) {
         var upload = multer({ //multer settings
           storage: multer.diskStorage({ //multers disk storage settings
             destination: function (req, file, cb) {
-                
-                
-                    folderName = req.query.folderName;
-                
+                folderName = req.query.folderName;
                 newDestination =  './app/uploads/'+folderName+'/';
                 console.log(req.query);
-               console.log(newDestination);
-                    var stat;
-                    try {
-                        stat = fs.statSync(newDestination);
-                    } catch (err) {
-                        fs.mkdirSync(newDestination);
-                    }
-                    if (stat && !stat.isDirectory()) {
-                        throw new Error('Directory cannot be created because an inode of a different type exists at "' + dest + '"');
-                    }
-                    
-                    cb(null, newDestination);      
+                console.log(newDestination);
+                var stat;
+                try {
+                    stat = fs.statSync(newDestination);
+                } catch (err) {
+                    fs.mkdirSync(newDestination);
+                }
+                if (stat && !stat.isDirectory()) {
+                    throw new Error('Directory cannot be created because an inode of a different type exists at "' + dest + '"');
+                }
                 
+                cb(null, newDestination);      
+            
               
             },
             filename: function (req, file, cb) {
