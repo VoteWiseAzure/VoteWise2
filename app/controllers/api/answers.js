@@ -84,7 +84,7 @@ module.exports = function( app ) {
           //return res.json({success: true, authorId: authorId});
         }//tokenData.success
         else{
-          return res.json({success: false, data: tokenData.data});
+          return res.json({success: false, data: tokenData.error});
         }
       });
   });
@@ -92,7 +92,6 @@ module.exports = function( app ) {
   app.get('/answers/popular', function(req, res) {
       //returns most popular questions: if Politician call this API it returns
       //questions most answered by Voters and vice versa
-    
       var token = req.body.token || req.query.token || req.headers['x-access-token'];
       if(!token){
         return res.status(403).send({ 
@@ -100,14 +99,12 @@ module.exports = function( app ) {
             error: 'No token provided.' 
         }); 
       }
-
       var params = req.query;
 
       var verifydRes = commonHelpers.verfiyRequiredFields(['categoryIds'], params, res); //verify require fields
       if(!verifydRes.success){
         return res.json(verifydRes);
       }
-
       var categoryIds = params.categoryIds ? params.categoryIds.split(",") : [];
 
       commonHelpers.getUserFromToken(token, app, function(tokenData){
@@ -126,7 +123,7 @@ module.exports = function( app ) {
           //return res.json({success: true, authorId: authorId});
         }//tokenData.success
         else{
-          return res.json({success: false, data: tokenData.data});
+          return res.json({success: false, error: tokenData.error});
         }
       });
   });

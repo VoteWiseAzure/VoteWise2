@@ -168,7 +168,16 @@ module.exports.getQuestions = function (params, res, app) {
   }
   else{
     //show all categories
+    var limit = 10;
+    var skipRecord = 0;
+    if(params.page && params.page > 0){
+      skipRecord = limit * params.page;
+    }
+
     Questions.find({}, {})
+    .skip(skipRecord)
+    .limit(10)
+    .lean()
     .exec(function ( err, resData ) {
       if (err) return res.json({success: false, error: err});
       if (resData) return res.json({success: true, data: resData});
@@ -230,6 +239,53 @@ module.exports.getQuestionsTaggedTo = function (user_id, res, app) {
     if(qdata){
       return res.json({success: true, data: qdata});
     }
+  });
+}
+
+module.exports.getAllQuestionOfSubcat = function (parentCatId, res, app) {
+  console.log("* getAllQuestionOfSubcat *");
+  //fetch all immediate subcategoies
+  Category.find({"parentIds.pid": { $in: parentCatId }}, {_id: 1, title: 1})
+  .lean()
+  .exec(function (err, catdata) {
+    if(err) return res.json({"success": false, error: err});
+
+    var tempCatIds = [];
+    catdata.forEach(function (cat, key) {
+      tempCatIds.push(cat._id);
+    });
+    tempCatIds.push(parentCatId);
+
+    Questions.aggregate([
+        {
+            $match: {
+                "categories.cid": {"$in": tempCatIds}
+            }
+        },
+        {
+          $project: {
+            _id: 1,
+            author: 1,
+            content: 1,
+            created: 1,
+            categories: 1
+          }
+        },
+        {
+          $sort: {
+              "categories.viewOrder": -1 
+          }
+        },
+        {
+          "$unwind" : "$categories"
+        }
+    ], function (err, qdata) {
+        if (err) {
+            return res.json({"success": false, data: err});
+        } else {
+            return res.json({"success": true, data: qdata});
+        }
+    });
   });
 }
 

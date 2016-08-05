@@ -565,12 +565,14 @@ module.exports.getCategory = function (params, res, app) {
     var resArr = [];
     async.forEachOf(catList, function (resCat, key, parentcallback) {
       var qur = new RegExp(","+resCat._id+",");
-      console.log("qur this 1: ",qur);
+      // console.log("count qur: : ",qur);
       Category.find({"parentIds.path": qur}, {})
       .exec(function(err, catData){
         //get all subcategories of all levels
+        /*
         if(catData){
           var cids = []; //store all subcategory ids
+          cids.push(resCat._id);
           console.log("catData len: ",catData.length);
           catData.forEach(function(val, key){
             cids.push(val._id);
@@ -584,18 +586,19 @@ module.exports.getCategory = function (params, res, app) {
             }
 
             resArr.push({
-                "_id": resCat._id,
-                "title": resCat.title,
-                "created": resCat.created,
-                "cat_type": resCat.cat_type,
-                "order": resCat.viewOrder,
-                "parentIds": resCat.parentIds,
-                "description": resCat.description,
-                "icon_image": resCat.icon_image,
-                // "order": resCat.order, //if order is present add it
-                "total_questions": total_questions
-              });
-              parentcallback();
+              "_id": resCat._id,
+              "title": resCat.title,
+              "created": resCat.created,
+              "cat_type": resCat.cat_type,
+              "order": resCat.viewOrder,
+              "parentIds": resCat.parentIds,
+              "description": resCat.description,
+              "icon_image": resCat.icon_image,
+              // "order": resCat.order, //if order is present add it
+              "total_questions": total_questions
+            });
+
+            parentcallback();
           });
         }
         else{
@@ -610,6 +613,37 @@ module.exports.getCategory = function (params, res, app) {
           });
           parentcallback();
         }
+        */
+
+        var cids = []; //store all subcategory ids
+        cids.push(resCat._id);
+        // console.log("catData len: ",catData.length);
+        catData.forEach(function(val, key){
+          cids.push(val._id);
+        });
+
+        Questions.count({"categories.cid": {"$in": cids}})
+        .exec(function(err, countData){
+          var total_questions = 0;
+          if(countData){
+            total_questions = countData;
+          }
+
+          resArr.push({
+            "_id": resCat._id,
+            "title": resCat.title,
+            "created": resCat.created,
+            "cat_type": resCat.cat_type,
+            "order": resCat.viewOrder,
+            "parentIds": resCat.parentIds,
+            "description": resCat.description,
+            "icon_image": resCat.icon_image,
+            // "order": resCat.order, //if order is present add it
+            "total_questions": total_questions
+          });
+
+          parentcallback();
+        });
       });
         //return callback("exceptino"); //intrupt the loop
     }, function (err) {
@@ -773,6 +807,67 @@ module.exports.getCategory = function (params, res, app) {
     });
   }
 }
+
+module.exports.getAnswerCount = function (arrCatIds, res, app) {
+  /*Questions.find({"categories.cid": id, "total_answers": {"$gt": 0}}, {})
+  .exec(function (err, qdata) {
+    if(err) return res.json({"success": false, "error": err});
+    if(qdata){
+      return res.json({"success": true, "data": qdata});
+    }
+  });*/
+
+  Questions.count({"categories.cid": {"$in": arrCatIds}, "total_answers": {"$gt": 0}})
+  .exec(function(err, countData){
+    if(err) return res.json({"success": false, "error": err});
+
+    return res.json({"success": true, "data": countData});
+  });
+}
+
+module.exports.getPopularBackground = function (parentId, res, app) {
+  //get all questoins
+  Category.find({"parentIds.pid": parentId}, {_id: 1, title: 1, description: 1})
+  .sort({ "parentIds.viewOrder" : 1})
+  .lean()
+  .exec(function (err, catdata) {
+    if(err) return res.json({"success": false, error: err});
+    // return res.json({"success": true, data: catdata});
+    var tempCatIds = [];
+    catdata.forEach(function (cat, key) {
+      tempCatIds.push(cat._id);
+    });
+
+    Questions.distinct("categories.cid", {
+        "total_answers": {"$gt": 0},
+        "categories.cid": {"$in": tempCatIds}
+      }, function (err, arrCatids) {
+      if (err) return res.json({success: false, error: err});
+      // return res.json({success: true, data: arrCatids});
+      // got most popular categories
+      console.log("arrCatids: ",arrCatids);
+
+      var getCatFromArr = function  (id) {
+        console.log("id: ", id);
+        var len = catdata.length;
+        for (var i = 0; i < len; i++) {
+          if(id.toString() == catdata[i]._id.toString()){
+            return catdata[i];
+          }
+        };
+        return null;
+      };
+
+      var tempResArr = [];
+      arrCatids.forEach(function (val, key) {
+        var catobj = getCatFromArr(val);
+        if(catobj) tempResArr.push(catobj);
+      });
+
+      return res.json({"success": true, data: tempResArr});
+    });
+  });
+}//getPopularBackground
 
 module.exports.getCategoryNew_for_testing = function (params, res, app) {
   // list all categories

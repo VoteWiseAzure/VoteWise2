@@ -161,6 +161,9 @@ module.exports = function( app ) {
         });
       }
     }
+    else if(params.subcat_of_catid){
+      modelHelpers.getAllQuestionOfSubcat(params.subcat_of_catid, res, app);
+    }
     else{
       modelHelpers.getQuestions(params, res, app);
     }

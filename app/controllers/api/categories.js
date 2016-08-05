@@ -182,10 +182,34 @@ module.exports = function( app ) {
     modelHelpers.getCategory(params, res, app);
   });
 
+  app.post('/categories/count-answered-questions', function(req, res) {
+    var params = req.body;
+    
+    var verifydRes = commonHelpers.verfiyRequiredFields(['ids'], params, res); //verify require fields
+    if(!verifydRes.success){
+      return res.json(verifydRes);
+    }
+
+    var arrCatIds = params.ids ? params.ids.split(",") : [];
+
+    modelHelpers.getAnswerCount(arrCatIds, res, app);
+  });
+
+  app.post('/categories/popular-subcategories', function(req, res) {
+    var params = req.body;
+    
+    var verifydRes = commonHelpers.verfiyRequiredFields(['parentId'], params, res); //verify require fields
+    if(!verifydRes.success){
+      return res.json(verifydRes);
+    }
+
+    modelHelpers.getPopularBackground(params.parentId, res, app);
+  });
+
   app.get('/categories/getAllTree', function(req, res) {
-    var params = req.query;
-    console.log(params);
-    modelHelpers.getAllSubCategory(params, res, app);
+     var params = req.query;
+     console.log(params);
+     modelHelpers.getAllSubCategory(params, res, app);
   });
 
   app.post('/categories/remove', function(req, res) {

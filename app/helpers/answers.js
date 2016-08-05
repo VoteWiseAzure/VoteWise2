@@ -170,7 +170,6 @@ module.exports.getAnswers = function (params, res, app) {
 
 module.exports.getPopularAnswers = function (categoryIds, authorData, res, app) {
   console.log("** getPopularAnswers **");
-
   /*
   "voter": false,
   "advocate": false,
@@ -187,8 +186,63 @@ module.exports.getPopularAnswers = function (categoryIds, authorData, res, app) 
   else if(authorData.politician){
     query.voter = true;
   }
-
+  
   //get all questoins
+  Category.find({"parentIds.pid": { $in: categoryIds }}, {_id: 1, title: 1, parentIds: 1})
+  .sort({ "parentIds.viewOrder" : 1})
+  .lean()
+  .exec(function (err, catdata) {
+    if(err) return res.json({"success": false, error: err});
+    // return res.json({"success": true, data: catdata});
+
+    var tempCatIds = [];
+    catdata.forEach(function (cat, key) {
+      tempCatIds.push(cat._id);
+    });
+
+    Questions.distinct("categories.cid", 
+      {
+        "total_answers": {"$gt": 0},
+        "categories.cid": {"$in": tempCatIds}
+      }, function (err, arrCatids) {
+      if (err) return res.json({success: false, error: err});
+      // return res.json({success: true, data: arrCatids});
+      // got most popular categories
+      console.log("arrCatids: ",arrCatids);
+      Questions.aggregate([
+          {
+            $match: {
+                "categories.cid": {"$in": arrCatids},
+                // total_answers: {"$gt": 0}
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              author: 1,
+              content: 1,
+              created: 1,
+              categories: 1
+            }
+          },
+          {
+            "$sort": {"categories.viewOrder": 1}
+          },
+          {
+            "$unwind" : "$categories"
+          }
+      ], function (err, qdata) {
+          if (err) {
+              return res.json({"success": false, data: err});
+          } else {
+              return res.json({"success": true, data: qdata});
+          }
+      });
+    });
+  });
+  
+
+  /*
   Questions.find({"categories.cid": { $in: categoryIds }}, {}).exec(function ( err, qRes ) {
     if (err) return res.json({success: false, error: err});
     //if (resData) return res.json({success: true, data: qRes});
@@ -245,8 +299,8 @@ module.exports.getPopularAnswers = function (categoryIds, authorData, res, app) 
         }
       });
     }
-
   });
+  */
 }
 
 module.exports.removeAnswer = function ( id, res, app ) {
