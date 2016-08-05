@@ -182,6 +182,12 @@ module.exports = function( app ) {
     modelHelpers.getCategory(params, res, app);
   });
 
+  app.get('/categories/getAllTree', function(req, res) {
+    var params = req.query;
+    console.log(params);
+    modelHelpers.getAllSubCategory(params, res, app);
+  });
+
   app.post('/categories/remove', function(req, res) {
     console.log("** categories remove **");
     var params = req.body;

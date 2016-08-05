@@ -935,6 +935,82 @@ module.exports.getCategoryNew_for_testing = function (params, res, app) {
   }
 }
 
+function getAllTree(parentId, subcategories, finalData, mycallback) {
+    Category.find({"parentIds.pid": parentId})
+      .exec(function ( err, resData ) {
+        if (err) return res.json({success: false, error: err});
+        if (resData && resData.length > 0) {
+              //var finalsub = [];
+              var finData = [];
+              //if(resData.length > 1) {
+                  async.forEachOf(resData, function (val, key, callback) {
+                    var finalOnj = val.toObject();
+                    getAllTree(val._id, subcategories, finalData, function(sub) {
+                        finalOnj.subcategories = sub;
+                        
+                        finData.push(finalOnj);
+                        callback();
+                      });
+
+                  }, function(err) {
+
+                      mycallback(finData);
+                  });
+ 
+          
+        } else {
+                
+              mycallback(false);  
+        }
+    });
+}
+
+module.exports.getAllSubCategory = function(data,res,app) {
+  console.log(data);
+  console.log(data.parentId);
+  var parentId = data.parentId;
+  if(parentId) {
+    var finalData = [];
+    var subcategories = [];
+       //getAllTree(parentId, subcategories, finalData,res,app);
+        Category.find({"parentIds.pid": parentId})
+        .exec(function ( err, resData ) {
+          if (err) return res.json({success: false, error: err});
+          if (resData && resData.length > 0) {
+
+                async.forEachOf(resData, function (val, key, callback) {
+                  var finalOnj = val.toObject();
+                 
+                  
+                  
+                  // tempUpdateCatArr = tempUpdateCatArr.concat(data);
+                  getAllTree(val._id, subcategories, finalData, function(sub) {
+                    finalOnj.subcategories = sub;
+                    console.log("=====Final called=========");
+                    finalData.push(finalOnj);  
+                    callback();
+                  });
+                  
+                  
+                  
+                }, 
+                function (err) {
+                  // body...
+                  //console.log("Final Data");
+                  //console.log(finalData);
+                  return res.json({success: true, data: finalData});
+                });
+            
+          } else {
+              return res.json({success: false, data: resData});
+          }
+      });
+
+  } else {
+    return res.json({success: false, data: "No parent id."});
+  }
+}
+
 module.exports.removeCategory = function ( id, old_path_ids, res, app ) {
 
   console.log("removeCategory :", id);
